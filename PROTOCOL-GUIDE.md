@@ -40,7 +40,7 @@ Director는 먼저 요청이 명백한 기록 제외 대상인지 가볍게 판�
 
 ## 4. 백그라운드 위임
 
-`Standard` 작업은 분류 직후 세션 시작 때 정한 Git 브랜치 전략을 따릅니다. 전용 작업 브랜치를 쓰는 경우 현재 브랜치를 기준 브랜치로 기억하고 작업 브랜치를 만든 뒤, 그 브랜치에서 `REQUEST`부터 기록합니다. 브랜치를 쓰지 않는 전략이면 현재 브랜치에서 기록과 변경을 진행합니다. 전용 작업 브랜치를 쓴 경우 승인 후 `CLOSE`을 기록해 승인 상태를 커밋한 다음 기준 브랜치로 자동 병합합니다. 위임은 가능한 한 백그라운드로 수행하며 Director는 위임 직후 사용자에게 짧은 상태를 반환하고 완료 대기·폴링·sleep으로 사용자 응답을 막지 않습니다.
+`Standard` 작업은 분류 직후 세션 시작 때 정한 Git 브랜치 전략을 따릅니다. 전용 작업 브랜치를 쓰는 경우 현재 브랜치를 기준 브랜치로 기억하고 작업 브랜치를 만든 뒤, 그 브랜치에서 `REQUEST`부터 기록합니다. 브랜치를 쓰지 않는 전략이면 현재 브랜치에서 기록과 변경을 진행합니다. 전용 작업 브랜치를 쓴 경우 승인 후 `CLOSE`을 기록해 승인 상태를 커밋한 다음 기준 브랜치로 자동 병합합니다. 위임은 가능한 한 백그라운드로 수행하며 Director는 위임 직후 사용자에게 짧은 상태를 반환하고 완료 대기·폴링·sleep으로 사용자 응답을 막지 않습니다. 하위 AI의 완료 통지에 의존하지 않고, 위임 직후 기대 산출물에 대해 `memento await <PLANNED|EXECUTED|REVIEW> <path>`를 백그라운드 명령으로 실행합니다(Claude Code에서는 `run_in_background: true`). 산출물이 `check-artifact`를 통과하면 0으로 종료되어 호스트가 Director를 깨우고, Director는 해당 이벤트를 기록합니다. 0이 아닌 종료는 제한 시간(기본 30분) 초과이므로 하위 AI 상태를 확인합니다. 사용자와 대화하는 도중 `await` 종료를 받으면 진행 중인 응답을 마친 직후, 다른 작업보다 먼저 이벤트 기록 → gate 확인 → 다음 단계 위임을 수행합니다. 통지를 놓친 경우의 안전망으로, Standard 작업이 열려 있는 동안 Director는 사용자 메시지마다 `memento status`를 한 번 실행합니다. `pending_artifact:` 줄은 완성됐지만 아직 기록되지 않은 산출물을 뜻하며 같은 방식으로 처리합니다.
 
 ## 5. 이벤트 타임라인
 
@@ -122,6 +122,7 @@ Director는 먼저 요청이 명백한 기록 제외 대상인지 가볍게 판�
 - 같은 작업의 모든 라운드 산출물은 같은 `<YYYYMMDD>-<HHMM>-<SLUG>` 키를 씁니다.
 - 산출물은 `.memento/templates/plan.md`, `run.md`, `review.md`, `close.md` 형식을 따릅니다.
 - Executor는 긴 검증 전 `RUN-<NN>.md`를 checkpoint로 먼저 저장할 수 있습니다. TODO나 `<...>` placeholder가 남았거나 `Status: complete`가 아닌 RUN은 완료가 아니며, Director는 완료 검증 전 `EXECUTED`를 기록하지 않습니다.
+- `PLAN`과 `REVIEW`에도 `Status` 줄이 있습니다. Planner는 보고 직전 마지막 쓰기로 정확히 `Status: complete`를 설정하며, Director는 이 줄로 완료를 감지합니다. `Status` 줄이 생기기 전에 작성된 과거 `PLAN`/`REVIEW`는 `memento lint`에서 그대로 통과합니다.
 - Executor는 절대 `CLOSE`을 쓰지 않습니다.
 - `REVIEW`는 사용자 결정을 위한 증거이지 승인이 아닙니다. Planner는 완료를 승인하거나 `CLOSE` 산출물을 작성하지 않습니다.
 - **사용자가 명시적으로 승인한 뒤에만 Director가 `CLOSE` 산출물을 작성하고 `CLOSE` 이벤트를 기록하여 작업을 종료할 수 있습니다.**
@@ -129,7 +130,7 @@ Director는 먼저 요청이 명백한 기록 제외 대상인지 가볍게 판�
 - 각 `RUN`은 변경 파일, 변경 요약, 테스트/검증, 미해결 리스크를 기록합니다.
 - `memento.log`는 `REQUEST`, `PLANNED`, `EXECUTED`, `REVIEW`, `FEEDBACK`, `CLOSE`, `RUN_DONE` 이벤트를 추가-전용으로 남기고 `path`로 산출물을 가리킵니다.
 - 산출물 작성과 `memento.log` 이벤트 추가는 별개의 필수 작업입니다. Planner와 Executor는 산출물 완료와 제안 summary를 Director에게 통지할 뿐 `memento.log`를 쓰거나 기록 완료를 주장하지 않습니다. 각 단계는 Director가 해당 이벤트를 추가하고 확인한 뒤에만 완료된 것으로 봅니다.
-- `.memento/bin/memento[.exe]`는 Director-owned 도구입니다. Director는 routine 흐름에서 `new-round`, `feedback`, `append`, `gate`, `status`, `prompt`를 사용합니다.
+- `.memento/bin/memento[.exe]`는 Director-owned 도구입니다. Director는 routine 흐름에서 `new-round`, `feedback`, `append`, `await`, `gate`, `status`, `prompt`를 사용합니다.
 - 모든 `memento.log` 이벤트는 Director가 `memento append`로 추가합니다. 도구가 없거나 실패할 때만 직접 로그를 읽고 수동으로 복구합니다.
 - Director는 다음 단계 위임 전에 `memento gate ...`로 직전 단계 이벤트를 확인합니다. 확인하지 못하면 다음 단계 위임을 중단하고 Director 소유의 로그 추가 또는 수정 작업을 완료합니다.
 - 커밋 전이나 업데이트 후에는 `memento lint`로 Memento AI 상태를 검증합니다.

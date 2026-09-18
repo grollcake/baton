@@ -20,6 +20,7 @@ type App struct {
 	Stdout     io.Writer
 	Stderr     io.Writer
 	Now        func() time.Time
+	Sleep      func(time.Duration)
 	Random     io.Reader
 	Command    func(string, ...string) ([]byte, error)
 	GOOS       string
@@ -38,6 +39,7 @@ func New(projectDir, mementoDir string) *App {
 		Stdout:     os.Stdout,
 		Stderr:     os.Stderr,
 		Now:        time.Now,
+		Sleep:      time.Sleep,
 		Random:     rand.Reader,
 		Command: func(name string, args ...string) ([]byte, error) {
 			return exec.Command(name, args...).Output()
@@ -107,6 +109,8 @@ func (a *App) Run(args []string) error {
 		return a.runModels(args)
 	case "check-artifact":
 		return a.runCheckArtifact(args)
+	case "await":
+		return a.runAwait(args)
 	case "lint":
 		return a.Lint()
 	case "merge-agent-block":
@@ -134,6 +138,7 @@ func (a *App) usage() {
   memento prompt <plan|review|exec> --task-id <id> --key <key> [--run-number <NN>]
   memento models <list|get|set> <codex|claude-code> [model options]
   memento check-artifact <PLANNED|EXECUTED|REVIEW|CLOSE> <path> [task-id]
+  memento await <PLANNED|EXECUTED|REVIEW> <path> [--task-id <id>] [--timeout <duration>]
   memento lint
   memento merge-agent-block <target-file> <source-file>
   memento update --upstream <memento-repo> [--apply]

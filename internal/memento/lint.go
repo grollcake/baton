@@ -115,7 +115,7 @@ func (state *lintState) checkLog() {
 		}
 		if record.Path != "" {
 			if requiresArtifact {
-				if artifactErr := state.app.CheckArtifact(record.Event, record.Path, record.TaskID); artifactErr != nil {
+				if artifactErr := state.app.checkArtifact(record.Event, record.Path, record.TaskID, true); artifactErr != nil {
 					state.err("Memento AI log line %d: %s", lineNumber, artifactErr)
 				}
 			} else if info, statErr := os.Stat(state.app.projectPath(record.Path)); statErr != nil || info.IsDir() {

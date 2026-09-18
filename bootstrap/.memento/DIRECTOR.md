@@ -110,6 +110,7 @@ for that platform-specific path.
 | Read previous role models | `<memento> models get <codex|claude-code>` |
 | Save role models | `<memento> models set <codex|claude-code> --director <model> [--director-effort <level>] --planner <model> [--planner-effort <level>] --executor <model> [--executor-effort <level>]` |
 | Append event | `<memento> append <EVENT> --task-id <id> --role <role> --summary <text> [--path <path>]` |
+| Await delegated artifact | `<memento> await <PLANNED|EXECUTED|REVIEW> <path> [--task-id <id>] [--timeout <duration>]` |
 | Check next gate | `<memento> gate <before-execute|before-review|before-approval> --task-id <id>` |
 | Record feedback | `<memento> feedback --task-id <id> --summary <text>` |
 | Inspect open task | `<memento> status [--task-id <id>]` |
@@ -120,6 +121,18 @@ for that platform-specific path.
 Run `<memento> gate ...` before delegating the next stage. If the prior
 event is missing, stop delegation and append or repair the Director-owned state.
 Read logs manually only when the tool is missing or fails.
+
+Do not rely on a delegate's completion notice. Right after each delegation, run
+`<memento> await ...` for the expected artifact as a background command when the
+host supports it (in Claude Code, `run_in_background: true`). It exits 0 once
+the artifact passes `check-artifact`, which wakes Director to append the event;
+a non-zero exit means the timeout (default 30m) passed, so inspect the delegate.
+
+When an `await` exit arrives while answering the user, finish that reply, then
+append the event, check the gate, and delegate the next stage before any other
+work. As a safety net for missed notices, while a Standard task is open run
+`<memento> status` once per user message; a `pending_artifact:` line names a
+complete artifact that is not appended yet, so process it the same way.
 
 Required gates:
 

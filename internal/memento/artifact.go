@@ -12,7 +12,10 @@ var (
 	artifactPathPattern = regexp.MustCompile(`^[A-Za-z0-9._/-]+$`)
 	placeholderPattern  = regexp.MustCompile(`<[^<>]+>`)
 	datePattern         = regexp.MustCompile(`(?m)^Date:[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]*$`)
+	statusLinePattern   = regexp.MustCompile(`(?m)^Status:`)
 )
+
+const statusCompletePattern = `^Status:[[:space:]]*complete[[:space:]]*$`
 
 func artifactNameMatches(event, path string) bool {
 	var pattern string
@@ -38,7 +41,7 @@ func requireArtifactLine(content, pattern, event, message, path string) error {
 	return nil
 }
 
-func (a *App) CheckArtifact(event, path, expectedTaskID string) error {
+func validateArtifactPath(event, path string) error {
 	if event != eventPlanned && event != eventExecuted && event != eventReview && event != eventClose {
 		return fmt.Errorf("artifact-check: unsupported event: %s", event)
 	}
@@ -50,6 +53,20 @@ func (a *App) CheckArtifact(event, path, expectedTaskID string) error {
 	}
 	if !artifactNameMatches(event, path) {
 		return fmt.Errorf("artifact-check: %s artifact name does not match its event: %s", event, path)
+	}
+	return nil
+}
+
+func (a *App) CheckArtifact(event, path, expectedTaskID string) error {
+	return a.checkArtifact(event, path, expectedTaskID, false)
+}
+
+// checkArtifact validates an artifact. PLAN and REVIEW artifacts written before
+// the Status line existed have none; allowLegacyStatus accepts those so lint
+// keeps passing on closed history, while a present Status must still be complete.
+func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacyStatus bool) error {
+	if err := validateArtifactPath(event, path); err != nil {
+		return err
 	}
 
 	contentBytes, err := os.ReadFile(a.projectPath(path))
@@ -76,6 +93,7 @@ func (a *App) CheckArtifact(event, path, expectedTaskID string) error {
 		return fmt.Errorf("artifact-check: %s artifact must include an ISO date: %s", event, path)
 	}
 
+	statusRequired := !allowLegacyStatus || statusLinePattern.MatchString(content)
 	switch event {
 	case eventPlanned:
 		checks := [][2]string{
@@ -85,13 +103,16 @@ func (a *App) CheckArtifact(event, path, expectedTaskID string) error {
 			{`^## Success Criteria[[:space:]]*$`, "must include Success Criteria"},
 			{`^## Validation[[:space:]]*$`, "must include Validation"},
 		}
+		if statusRequired {
+			checks = append(checks, [2]string{statusCompletePattern, "must set Status: complete"})
+		}
 		return checkArtifactLines(content, checks, event, path)
 	case eventExecuted:
 		round := artifactRound(path, event)
 		checks := [][2]string{
 			{`^# RUN-` + regexp.QuoteMeta(round) + `: .+`, "title must match RUN-" + round},
 			{`^Executor:[[:space:]]*[^[:space:]].*`, "must identify the Executor"},
-			{`^Status:[[:space:]]*complete[[:space:]]*$`, "must set Status: complete"},
+			{statusCompletePattern, "must set Status: complete"},
 			{`^## Validation[[:space:]]*$`, "must include Validation"},
 			{`^## Success Criteria Status[[:space:]]*$`, "must include Success Criteria Status"},
 		}
@@ -104,6 +125,9 @@ func (a *App) CheckArtifact(event, path, expectedTaskID string) error {
 			{`^Result:[[:space:]]*(ready-for-user-decision|blockers)[[:space:]]*$`, "must set a valid Result"},
 			{`^## Suggested User Checks[[:space:]]*$`, "must include Suggested User Checks"},
 			{`^## Evidence Reviewed[[:space:]]*$`, "must include Evidence Reviewed"},
+		}
+		if statusRequired {
+			checks = append(checks, [2]string{statusCompletePattern, "must set Status: complete"})
 		}
 		return checkArtifactLines(content, checks, event, path)
 	case eventClose:

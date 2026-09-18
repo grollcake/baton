@@ -26,6 +26,13 @@ A review is evidence for the user's decision, not approval. Mark findings as:
 
 Include three to five concrete manual checks for the user.
 
+## Completion Marker
+
+`PLAN` and `REVIEW` carry a `Status` line. `Status: checkpoint` or unresolved
+`<...>` template placeholders mean the artifact is incomplete. Set exactly
+`Status: complete` as the last write before reporting completion; Director
+detects completion from this line.
+
 ## Report To Director
 
 Report artifact path, outcome, validation status, blockers, nits, risks, manual

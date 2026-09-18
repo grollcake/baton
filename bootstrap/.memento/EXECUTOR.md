@@ -14,7 +14,8 @@ unresolved risks, and out-of-scope items returned to Director.
 
 Checkpoint `RUN` files are allowed before long validation. `Status: checkpoint`,
 TODO fields, or unresolved `<...>` template placeholders mean the run is
-incomplete. Set exactly `Status: complete` before reporting completion.
+incomplete. Set exactly `Status: complete` as the last write before reporting
+completion; Director detects completion from this line.
 
 ## User-Reported Defects
 

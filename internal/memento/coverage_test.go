@@ -99,6 +99,10 @@ func TestCheckArtifactCommandAndValidationErrors(t *testing.T) {
 		{"task mismatch", eventPlanned, ".memento/runs/task-PLAN.md", validPlan("wrong"), "abcd"},
 		{"invalid date", eventPlanned, ".memento/runs/date-PLAN.md", strings.Replace(validPlan("abcd"), "2026-07-11", "11/07/2026", 1), "abcd"},
 		{"run status", eventExecuted, ".memento/runs/status-RUN-01.md", strings.Replace(validRun("abcd", "01"), "Status: complete", "Status: checkpoint", 1), "abcd"},
+		{"plan status missing", eventPlanned, ".memento/runs/nostatus-PLAN.md", strings.Replace(validPlan("abcd"), "Status: complete\n", "", 1), "abcd"},
+		{"plan status checkpoint", eventPlanned, ".memento/runs/checkpoint-PLAN.md", strings.Replace(validPlan("abcd"), "Status: complete", "Status: checkpoint", 1), "abcd"},
+		{"review status missing", eventReview, ".memento/runs/nostatus-REVIEW-01.md", strings.Replace(validReview("abcd", "01"), "Status: complete\n", "", 1), "abcd"},
+		{"review status checkpoint", eventReview, ".memento/runs/checkpoint-REVIEW-01.md", strings.Replace(validReview("abcd", "01"), "Status: complete", "Status: checkpoint", 1), "abcd"},
 		{"review result", eventReview, ".memento/runs/result-REVIEW-01.md", strings.Replace(validReview("abcd", "01"), "ready-for-user-decision", "unknown", 1), "abcd"},
 	}
 	for _, testCase := range cases {
@@ -118,6 +122,7 @@ func validPlan(taskID string) string {
 Task ID: ` + taskID + `
 Date: 2026-07-11
 Planner: test
+Status: complete
 ## Director Brief
 ## Success Criteria
 ## Validation
@@ -140,6 +145,7 @@ func validReview(taskID, round string) string {
 Task ID: ` + taskID + `
 Date: 2026-07-11
 Planner: test
+Status: complete
 Result: ready-for-user-decision
 ## Suggested User Checks
 ## Evidence Reviewed

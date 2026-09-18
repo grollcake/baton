@@ -63,8 +63,8 @@ Store artifacts in `.memento/runs/` using one stable
 `<NN>` starts at `01`. Never overwrite an older round except current-run
 feedback before approval. An artifact is incomplete while any template
 placeholder (`<...>`) remains; a `RUN` is also incomplete while any TODO
-remains. A completed `RUN` must contain exactly `Status: complete`, and a
-completed `REVIEW` must set `Result` to
+remains. A completed `PLAN`, `RUN`, or `REVIEW` must contain exactly
+`Status: complete`, and a completed `REVIEW` must set `Result` to
 `ready-for-user-decision` or `blockers`. Each `RUN` records changed files,
 change summary, validation, and unresolved risks. Use the matching template in
 `.memento/templates/` for every artifact. Artifact `Task ID` values must

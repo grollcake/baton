@@ -177,6 +177,7 @@ func writePlan(t *testing.T, project, path, taskID string) {
 Task ID: %s
 Date: 2026-07-11
 Planner: test
+Status: complete
 ## Director Brief
 - Goal: validate the flow
 ## Success Criteria
@@ -206,6 +207,7 @@ func writeReview(t *testing.T, project, path, taskID, round, result string) {
 Task ID: %s
 Date: 2026-07-11
 Planner: test
+Status: complete
 Result: %s
 ## Suggested User Checks
 - Inspect the output.

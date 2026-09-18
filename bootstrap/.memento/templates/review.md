@@ -4,6 +4,7 @@ Task ID: <task-id>
 Date: <YYYY-MM-DD>
 Planner: <planner>
 Run: <path-to-run>
+Status: <checkpoint | complete>
 
 ## Decision
 

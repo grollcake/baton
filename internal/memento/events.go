@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 )
 
 const (
@@ -466,7 +467,59 @@ func (a *App) runStatus(args []string) error {
 		eventRunDone: "closed (direct work)",
 	}[last]
 	fmt.Fprintf(a.Stdout, "next_gate: %s\nbranch: %s\n", valueOr(next, "unknown"), branch)
+	for _, pending := range a.pendingArtifacts(records, taskID, last) {
+		fmt.Fprintf(a.Stdout, "pending_artifact: %s\n", pending)
+	}
 	return nil
+}
+
+// pendingArtifacts lists complete artifacts that the log does not record yet,
+// so Director recovers when a delegate's completion was missed.
+func (a *App) pendingArtifacts(records []Record, taskID, last string) []string {
+	event, pattern := "", ""
+	planned, hasPlan := lastRecord(records, taskID, eventPlanned)
+	key := filepath.Base(artifactKey(planned.Path, eventPlanned))
+	switch {
+	case last == eventRequest:
+		event, pattern = eventPlanned, "*-PLAN.md"
+	case !hasPlan:
+		return nil
+	case last == eventPlanned || last == eventReview || last == eventFeedback:
+		event, pattern = eventExecuted, key+"-RUN-*.md"
+	case last == eventExecuted:
+		executed, _ := lastRecord(records, taskID, eventExecuted)
+		event, pattern = eventReview, key+"-REVIEW-"+artifactRound(executed.Path, eventExecuted)+".md"
+	default:
+		return nil
+	}
+
+	var feedbackAt time.Time
+	if last == eventFeedback {
+		feedback, _ := lastRecord(records, taskID, eventFeedback)
+		feedbackAt, _ = time.ParseInLocation("2006-01-02T15:04:05", feedback.Timestamp, time.Local)
+	}
+	matches, _ := filepath.Glob(filepath.Join(a.projectPath(".memento/runs"), pattern))
+	var pending []string
+	for _, match := range matches {
+		path := ".memento/runs/" + filepath.Base(match)
+		logged := false
+		for _, record := range records {
+			if record.TaskID == taskID && record.Event == event && record.Path == path {
+				logged = true
+			}
+		}
+		if logged {
+			// A current-run FEEDBACK fix rewrites the logged RUN in place.
+			info, statErr := os.Stat(match)
+			if feedbackAt.IsZero() || statErr != nil || !info.ModTime().After(feedbackAt) {
+				continue
+			}
+		}
+		if a.CheckArtifact(event, path, taskID) == nil {
+			pending = append(pending, fmt.Sprintf("%s (complete, not appended as %s)", path, event))
+		}
+	}
+	return pending
 }
 
 func valueOr(value, fallback string) string {

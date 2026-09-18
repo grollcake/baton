@@ -3,6 +3,7 @@
 Task ID: <task-id>
 Date: <YYYY-MM-DD>
 Planner: <planner>
+Status: <checkpoint | complete>
 
 ## Director Brief
 
