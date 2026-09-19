@@ -29,6 +29,107 @@ func TestTemplatesAreRejected(t *testing.T) {
 	}
 }
 
+// TestPlaceholderCheckAcceptsDocumentedSyntax pins the regression from task
+// vxym: an artifact describing CLI syntax in angle brackets must pass, because
+// the tokens it uses do not appear verbatim in any template.
+func TestPlaceholderCheckAcceptsDocumentedSyntax(t *testing.T) {
+	harness := newHarness(t)
+	syntax := "\n- returns `baton prompt plan --task-id <id> --key <key>`\n- `--path <valid PLAN path with no file>`\n"
+
+	runPath := ".baton/runs/20260919-1902-syntax-RUN-01.md"
+	writeArtifact(t, harness.app.ProjectDir, runPath, validRun("syntax", "01")+syntax)
+	if err := harness.app.CheckArtifact(eventExecuted, runPath, "syntax"); err != nil {
+		t.Fatalf("EXECUTED artifact with documented CLI syntax was refused: %v", err)
+	}
+
+	planPath := ".baton/runs/20260919-1902-syntax-PLAN.md"
+	writeArtifact(t, harness.app.ProjectDir, planPath, validPlan("syntax")+syntax)
+	if err := harness.app.CheckArtifact(eventPlanned, planPath, "syntax"); err != nil {
+		t.Fatalf("PLANNED artifact with documented CLI syntax was refused: %v", err)
+	}
+}
+
+// TestPlaceholderCheckRefusesSinglePlaceholder proves the check catches a
+// partly-filled artifact, not just a whole unmodified template: an otherwise
+// complete artifact of each kind that still carries one token copied from its
+// matching template must be refused.
+func TestPlaceholderCheckRefusesSinglePlaceholder(t *testing.T) {
+	harness := newHarness(t)
+	cases := []struct {
+		event, template, path, content string
+	}{
+		{eventPlanned, "plan.md", ".baton/runs/20260919-1902-onep-PLAN.md", validPlan("onep")},
+		{eventExecuted, "run.md", ".baton/runs/20260919-1902-onep-RUN-01.md", validRun("onep", "01")},
+		{eventReview, "review.md", ".baton/runs/20260919-1902-onep-REVIEW-01.md", validReview("onep", "01")},
+		{eventClose, "close.md", ".baton/runs/20260919-1902-onep-CLOSE.md", validClose("onep")},
+	}
+	for _, testCase := range cases {
+		t.Run(testCase.event, func(t *testing.T) {
+			templateContent := readFile(t, harness.app.batonPath("templates", testCase.template))
+			token := placeholderPattern.FindString(string(templateContent))
+			if token == "" {
+				t.Fatalf("template %s has no placeholder token to reinsert", testCase.template)
+			}
+			content := testCase.content + "\n" + token + "\n"
+			writeArtifact(t, harness.app.ProjectDir, testCase.path, content)
+			if err := harness.app.CheckArtifact(testCase.event, testCase.path, "onep"); err == nil {
+				t.Fatalf("%s artifact with one leftover template placeholder unexpectedly passed", testCase.event)
+			}
+		})
+	}
+}
+
+// TestPlaceholderCheckFailsClosedWithoutTemplates proves the check errors,
+// rather than silently accepting every artifact, when it cannot derive a
+// placeholder vocabulary from .baton/templates/*.md: a missing templates
+// directory, an empty one, and an unreadable template file must all refuse.
+func TestPlaceholderCheckFailsClosedWithoutTemplates(t *testing.T) {
+	t.Run("missing directory", func(t *testing.T) {
+		harness := newHarness(t)
+		path := ".baton/runs/20260919-1902-notpl-PLAN.md"
+		writeArtifact(t, harness.app.ProjectDir, path, validPlan("notpl"))
+		if err := os.RemoveAll(harness.app.batonPath("templates")); err != nil {
+			t.Fatal(err)
+		}
+		if err := harness.app.CheckArtifact(eventPlanned, path, "notpl"); err == nil {
+			t.Fatal("check-artifact passed with no templates directory")
+		}
+	})
+
+	t.Run("empty directory", func(t *testing.T) {
+		harness := newHarness(t)
+		path := ".baton/runs/20260919-1902-emptpl-PLAN.md"
+		writeArtifact(t, harness.app.ProjectDir, path, validPlan("emptpl"))
+		if err := os.RemoveAll(harness.app.batonPath("templates")); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(harness.app.batonPath("templates"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := harness.app.CheckArtifact(eventPlanned, path, "emptpl"); err == nil {
+			t.Fatal("check-artifact passed with an empty templates directory")
+		}
+	})
+
+	t.Run("templates without placeholders", func(t *testing.T) {
+		harness := newHarness(t)
+		path := ".baton/runs/20260919-1902-noplaceholder-PLAN.md"
+		writeArtifact(t, harness.app.ProjectDir, path, validPlan("noplaceholder"))
+		if err := os.RemoveAll(harness.app.batonPath("templates")); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.MkdirAll(harness.app.batonPath("templates"), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(harness.app.batonPath("templates"), "plain.md"), []byte("no placeholders here\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := harness.app.CheckArtifact(eventPlanned, path, "noplaceholder"); err == nil {
+			t.Fatal("check-artifact passed with templates that contain no placeholder tokens")
+		}
+	})
+}
+
 func TestTransitionMatrixAndAllowedFlows(t *testing.T) {
 	harness := newHarness(t)
 	events := []string{eventRequest, eventPlanned, eventExecuted, eventReview, eventFeedback, eventClose, eventRunDone}

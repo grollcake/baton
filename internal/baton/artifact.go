@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 )
@@ -14,6 +15,38 @@ var (
 	datePattern         = regexp.MustCompile(`(?m)^Date:[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}[[:space:]]*$`)
 	statusLinePattern   = regexp.MustCompile(`(?m)^Status:`)
 )
+
+// templatePlaceholderTokens returns the set of angle-bracket tokens found
+// across the project's .baton/templates/*.md files. checkArtifact refuses an
+// artifact that still contains one of these tokens verbatim, rather than
+// refusing any angle-bracket text: an artifact is free to document CLI syntax
+// such as `--task-id <id>` as long as that exact phrase never occurs in a
+// template. If the templates cannot be read or yield no token, this returns
+// an error instead of an empty set: an empty set would make the check accept
+// every artifact silently, turning it off without anything failing.
+func (a *App) templatePlaceholderTokens() (map[string]bool, error) {
+	matches, err := filepath.Glob(a.batonPath("templates", "*.md"))
+	if err != nil {
+		return nil, fmt.Errorf("artifact-check: cannot read templates: %w", err)
+	}
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("artifact-check: no template files found under %s", a.batonPath("templates"))
+	}
+	tokens := map[string]bool{}
+	for _, match := range matches {
+		content, err := os.ReadFile(match)
+		if err != nil {
+			return nil, fmt.Errorf("artifact-check: cannot read template %s: %w", match, err)
+		}
+		for _, token := range placeholderPattern.FindAllString(string(content), -1) {
+			tokens[token] = true
+		}
+	}
+	if len(tokens) == 0 {
+		return nil, fmt.Errorf("artifact-check: templates under %s contain no placeholder tokens", a.batonPath("templates"))
+	}
+	return tokens, nil
+}
 
 const statusCompletePattern = `^Status:[[:space:]]*complete[[:space:]]*$`
 
@@ -88,8 +121,14 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacy bool
 		return err
 	}
 	content := string(contentBytes)
-	if placeholderPattern.MatchString(content) {
-		return fmt.Errorf("artifact-check: %s artifact contains an unresolved placeholder: %s", event, path)
+	tokens, err := a.templatePlaceholderTokens()
+	if err != nil {
+		return err
+	}
+	for token := range tokens {
+		if strings.Contains(content, token) {
+			return fmt.Errorf("artifact-check: %s artifact contains an unresolved placeholder %s: %s", event, token, path)
+		}
 	}
 	if event == eventExecuted && strings.Contains(content, "TODO") {
 		return fmt.Errorf("artifact-check: %s artifact contains an unresolved TODO: %s", event, path)

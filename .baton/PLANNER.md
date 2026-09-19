@@ -33,6 +33,12 @@ Include three to five concrete manual checks for the user.
 `Status: complete` as the last write before reporting completion; Director
 detects completion from this line.
 
+As the last step before reporting completion, run `baton check-artifact
+PLANNED .baton/runs/KEY-PLAN.md TASK-ID` (or `REVIEW .baton/runs/KEY-REVIEW-NN.md
+TASK-ID` when reviewing) on your own artifact. Lint is not a substitute: lint
+only inspects artifacts already recorded in `baton.log`, and your artifact is
+not among them until Director appends it.
+
 ## Report To Director
 
 Report artifact path, outcome, validation status, blockers, nits, risks, manual
