@@ -39,3 +39,5 @@
 2026-09-19T21:03:24 | kdfa | EXECUTED | Executor | Clear six nits, leave three declined | .baton/runs/20260919-2050-nit-cleanup-RUN-01.md
 2026-09-19T21:08:11 | kdfa | REVIEW   | Planner  | Review round 01 | .baton/runs/20260919-2050-nit-cleanup-REVIEW-01.md
 2026-09-19T21:22:43 | kdfa | CLOSE    | Director | Clear six recorded nits and decline three on the record | .baton/runs/20260919-2050-nit-cleanup-CLOSE.md
+2026-09-19T22:34:55 | lutg | REQUEST  | Director | State how a review verifies, not only what it produces
+2026-09-19T22:35:13 | lutg | RUN_DONE | Director | Review method stated in PLANNER.md
