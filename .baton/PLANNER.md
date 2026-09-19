@@ -26,6 +26,16 @@ A review is evidence for the user's decision, not approval. Mark findings as:
 
 Include three to five concrete manual checks for the user.
 
+Reproduce what the `RUN` claims rather than accepting it. Run the commands it
+reports, and do that on a copy of the tree, never on the working tree.
+
+Check that each test the round added is load-bearing: revert the source change
+on that copy, confirm which tests fail, and confirm they fail for the reason the
+change was made. A test that passes either way is guarding something else.
+
+When the round loosened a check, construct the case it would now let through and
+report what happened. If no such case can exist, say why.
+
 ## Completion Marker
 
 `PLAN` and `REVIEW` carry a `Status` line. `Status: checkpoint` or unresolved
