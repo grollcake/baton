@@ -52,25 +52,39 @@ func TestPlaceholderCheckAcceptsDocumentedSyntax(t *testing.T) {
 // TestPlaceholderCheckRefusesSinglePlaceholder proves the check catches a
 // partly-filled artifact, not just a whole unmodified template: an otherwise
 // complete artifact of each kind that still carries one token copied from its
-// matching template must be refused.
+// matching template must be refused. Each token is chosen to occur in its own
+// template and in no other, and the test asserts that uniqueness itself, so
+// it fails loudly rather than passing trivially if a future template edit
+// makes the token shared.
 func TestPlaceholderCheckRefusesSinglePlaceholder(t *testing.T) {
 	harness := newHarness(t)
 	cases := []struct {
-		event, template, path, content string
+		event, template, path, content, token string
 	}{
-		{eventPlanned, "plan.md", ".baton/runs/20260919-1902-onep-PLAN.md", validPlan("onep")},
-		{eventExecuted, "run.md", ".baton/runs/20260919-1902-onep-RUN-01.md", validRun("onep", "01")},
-		{eventReview, "review.md", ".baton/runs/20260919-1902-onep-REVIEW-01.md", validReview("onep", "01")},
-		{eventClose, "close.md", ".baton/runs/20260919-1902-onep-CLOSE.md", validClose("onep")},
+		{eventPlanned, "plan.md", ".baton/runs/20260919-1902-onep-PLAN.md", validPlan("onep"), "<what must be true when the task is complete>"},
+		{eventExecuted, "run.md", ".baton/runs/20260919-1902-onep-RUN-01.md", validRun("onep", "01"), "<met | not met | partial>"},
+		{eventReview, "review.md", ".baton/runs/20260919-1902-onep-REVIEW-01.md", validReview("onep", "01"), "<ready-for-user-decision | blockers>"},
+		{eventClose, "close.md", ".baton/runs/20260919-1902-onep-CLOSE.md", validClose("onep"), "<why the run satisfies the plan and success criteria>"},
+	}
+	templates, err := filepath.Glob(harness.app.batonPath("templates", "*.md"))
+	if err != nil || len(templates) == 0 {
+		t.Fatalf("could not list templates: %v", err)
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.event, func(t *testing.T) {
 			templateContent := readFile(t, harness.app.batonPath("templates", testCase.template))
-			token := placeholderPattern.FindString(string(templateContent))
-			if token == "" {
-				t.Fatalf("template %s has no placeholder token to reinsert", testCase.template)
+			if !strings.Contains(string(templateContent), testCase.token) {
+				t.Fatalf("token %q does not appear in its own template %s", testCase.token, testCase.template)
 			}
-			content := testCase.content + "\n" + token + "\n"
+			for _, other := range templates {
+				if filepath.Base(other) == testCase.template {
+					continue
+				}
+				if strings.Contains(string(readFile(t, other)), testCase.token) {
+					t.Fatalf("token %q attributed to %s also appears in %s; choose a token unique to its template", testCase.token, testCase.template, filepath.Base(other))
+				}
+			}
+			content := testCase.content + "\n" + testCase.token + "\n"
 			writeArtifact(t, harness.app.ProjectDir, testCase.path, content)
 			if err := harness.app.CheckArtifact(testCase.event, testCase.path, "onep"); err == nil {
 				t.Fatalf("%s artifact with one leftover template placeholder unexpectedly passed", testCase.event)
@@ -82,7 +96,8 @@ func TestPlaceholderCheckRefusesSinglePlaceholder(t *testing.T) {
 // TestPlaceholderCheckFailsClosedWithoutTemplates proves the check errors,
 // rather than silently accepting every artifact, when it cannot derive a
 // placeholder vocabulary from .baton/templates/*.md: a missing templates
-// directory, an empty one, and an unreadable template file must all refuse.
+// directory, an empty one, and templates with no placeholder tokens must all
+// refuse.
 func TestPlaceholderCheckFailsClosedWithoutTemplates(t *testing.T) {
 	t.Run("missing directory", func(t *testing.T) {
 		harness := newHarness(t)

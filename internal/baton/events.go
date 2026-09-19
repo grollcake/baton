@@ -510,10 +510,16 @@ func (a *App) runStatus(args []string) error {
 	}[last]
 	var unreadableReviewPath string
 	if last == eventReview {
+		// Fail-closed default: without a readable REVIEW that reports
+		// ready-for-user-decision, the next gate is another EXECUTED round,
+		// never user approval. runStatus and nextCommand each read the
+		// REVIEW artifact independently and must stay in agreement about
+		// what counts as ready.
+		next = "EXECUTED (delegate Executor)"
 		if review, found := lastRecord(records, taskID, eventReview); found {
 			outcome, err := a.reviewResult(review.Path)
-			if outcome != reviewReady {
-				next = "EXECUTED (delegate Executor)"
+			if err == nil && outcome == reviewReady {
+				next = "user approval -> CLOSE"
 			}
 			if err != nil {
 				unreadableReviewPath = review.Path
@@ -522,7 +528,7 @@ func (a *App) runStatus(args []string) error {
 	}
 	fmt.Fprintf(a.Stdout, "next_gate: %s\nbranch: %s\n", valueOr(next, "unknown"), branch)
 	if unreadableReviewPath != "" {
-		fmt.Fprintf(a.Stdout, "review_artifact: unreadable: %s\n", unreadableReviewPath)
+		fmt.Fprintf(a.Stdout, "review_artifact_unreadable: %s\n", unreadableReviewPath)
 	}
 	if command := a.nextCommand(records, taskID, last); command != "" {
 		fmt.Fprintf(a.Stdout, "next_command: %s\n", command)
