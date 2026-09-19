@@ -309,6 +309,13 @@ func (a *App) runGate(args []string) error {
 		}
 		return fmt.Errorf("gate failed: %s is not allowed after %s for task-id %s", gate, event, taskID)
 	}
+	if gate == "before-execute" {
+		if others := inFlightTasks(records, taskID); len(others) > 0 {
+			if err := a.requireConcurrencyApproval(taskID, others); err != nil {
+				return err
+			}
+		}
+	}
 	record, _ := lastRecord(records, taskID, event)
 	if gate == "before-approval" {
 		if err := a.requireReviewReady(record, taskID); err != nil {

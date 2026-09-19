@@ -85,6 +85,16 @@ round must match its immediately preceding RUN round.
 For user-reported defects, Director passes the report to Executor; Executor
 records evidence before fixing and a self smoke test after fixing.
 
+## Concurrent Tasks
+
+Baton runs every delegate against one checkout and cannot isolate working
+trees, so two tasks editing at once can overwrite each other silently. A second
+task may start only when `.baton/CONCURRENCY.md` records explicit user approval
+and names every task then running with the scope it owns. Use
+`templates/concurrency.md`. The record covers exactly the tasks it lists, so
+opening another task or closing one invalidates it and Director asks again.
+Director tells the user the risk before asking, not after.
+
 ## Approval And Feedback
 
 Only explicit user approval can close Standard work. Any user feedback after a

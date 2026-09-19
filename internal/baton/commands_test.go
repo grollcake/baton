@@ -223,3 +223,40 @@ func TestExecutedRoundMustIncrement(t *testing.T) {
 	writeRun(t, harness.app.ProjectDir, first, taskID, "01")
 	harness.run(t, "append", eventExecuted, "--task-id", taskID, "--role", "Executor", "--summary", "Run complete", "--path", first)
 }
+
+func TestConcurrentEditingNeedsUserApproval(t *testing.T) {
+	harness := newHarness(t)
+	open := func(slug string) (string, string) {
+		taskID, key := parseRoundOutput(t, harness.run(t, "new-round", slug, "--summary", "Task "+slug))
+		planPath := ".baton/runs/" + key + "-PLAN.md"
+		writePlan(t, harness.app.ProjectDir, planPath, taskID)
+		harness.run(t, "append", eventPlanned, "--task-id", taskID, "--role", "Planner", "--summary", "Plan complete", "--path", planPath)
+		return taskID, key
+	}
+	first, _ := open("concurrent-one")
+	harness.run(t, "gate", "before-execute", "--task-id", first)
+
+	second, _ := open("concurrent-two")
+	if err := harness.fail("gate", "before-execute", "--task-id", second); err == nil {
+		t.Fatal("gate started a second task with no recorded user approval")
+	}
+
+	path := harness.app.batonPath("CONCURRENCY.md")
+	approval := "# CONCURRENCY\n\nDate: 2026-07-11\nDirector: test\nApproved By: User\n\n## Tasks\n\n- " +
+		first + ": internal/one\n- " + second + ": internal/two\n\n## Conflict Plan\n\n- Disjoint directories.\n"
+	if err := os.WriteFile(path, []byte(approval), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	harness.run(t, "gate", "before-execute", "--task-id", second)
+
+	third, _ := open("concurrent-three")
+	if err := harness.fail("gate", "before-execute", "--task-id", third); err == nil {
+		t.Fatal("gate accepted approval that does not name every running task")
+	}
+	if err := os.WriteFile(path, []byte(strings.Replace(approval, "Approved By: User", "Approved By: Director", 1)), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := harness.fail("gate", "before-execute", "--task-id", second); err == nil {
+		t.Fatal("gate accepted approval that the user did not give")
+	}
+}

@@ -145,8 +145,13 @@ complete artifact that is not appended yet, so process it the same way.
 resuming a session, run `<baton> status --open` for every open task. Parallel
 delegations need one wait, not one per artifact: pass each `<EVENT> <path>`
 pair to a single `<baton> await`, which returns on the first one to complete.
-Baton does not isolate working trees, so do not run two Executors against the
-same checkout at once.
+Baton does not isolate working trees. Before a second task starts work, tell
+the user that parallel edits can overwrite each other undetected, agree which
+scope each task owns, and record it in `.baton/CONCURRENCY.md` from
+`templates/concurrency.md` with `Approved By: User`.
+`<baton> gate before-execute` refuses while another task is in flight until
+that record names every running task; it checks the approval, not the scopes,
+so overlapping scopes are Director's call to avoid.
 
 Required gates:
 
