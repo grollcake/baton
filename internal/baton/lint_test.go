@@ -122,3 +122,39 @@ func TestGuidePrintsShippedDocuments(t *testing.T) {
 		t.Fatal("guide accepted missing arguments")
 	}
 }
+
+func TestLintRejectsIgnoredBatonDirectory(t *testing.T) {
+	harness := newHarness(t)
+	if _, err := harness.app.runGit("init"); err != nil {
+		t.Skipf("git unavailable: %s", err)
+	}
+	harness.run(t, "lint")
+
+	path := filepath.Join(harness.app.ProjectDir, ".gitignore")
+	if err := os.WriteFile(path, []byte(".baton/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := harness.fail("lint"); err == nil {
+		t.Fatal("lint accepted a .baton directory ignored by Git")
+	}
+}
+
+func TestLintToleratesLegacyRunSections(t *testing.T) {
+	harness := newHarness(t)
+	key := ".baton/runs/20260711-1001-legacy-run"
+	planPath, runPath := key+"-PLAN.md", key+"-RUN-01.md"
+	writePlan(t, harness.app.ProjectDir, planPath, "lgrn")
+	legacy := strings.Replace(validRun("lgrn", "01"), "## Changes\n", "", 1)
+	writeArtifact(t, harness.app.ProjectDir, runPath, strings.Replace(legacy, "## Unresolved Risks\n", "", 1))
+	writeLog(t, harness.app.BatonDir,
+		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
+		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
+		"2026-07-11T10:01:00 | lgrn | REQUEST  | Director | Legacy run",
+		"2026-07-11T10:01:01 | lgrn | PLANNED  | Planner  | Plan complete | "+planPath,
+		"2026-07-11T10:01:02 | lgrn | EXECUTED | Executor | Run complete | "+runPath,
+	)
+	harness.run(t, "lint")
+	if err := harness.fail("check-artifact", eventExecuted, runPath, "lgrn"); err == nil {
+		t.Fatal("check-artifact accepted a RUN without the required sections")
+	}
+}

@@ -61,10 +61,11 @@ func (a *App) CheckArtifact(event, path, expectedTaskID string) error {
 	return a.checkArtifact(event, path, expectedTaskID, false)
 }
 
-// checkArtifact validates an artifact. PLAN and REVIEW artifacts written before
-// the Status line existed have none; allowLegacyStatus accepts those so lint
-// keeps passing on closed history, while a present Status must still be complete.
-func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacyStatus bool) error {
+// checkArtifact validates an artifact. Rules added after a project installed
+// Baton cannot be met by artifacts already in its append-only history, so
+// allowLegacy relaxes those for lint while append still enforces them on new
+// artifacts. A present Status must be complete either way.
+func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacy bool) error {
 	if err := validateArtifactPath(event, path); err != nil {
 		return err
 	}
@@ -93,7 +94,7 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacyStatu
 		return fmt.Errorf("artifact-check: %s artifact must include an ISO date: %s", event, path)
 	}
 
-	statusRequired := !allowLegacyStatus || statusLinePattern.MatchString(content)
+	statusRequired := !allowLegacy || statusLinePattern.MatchString(content)
 	switch event {
 	case eventPlanned:
 		checks := [][2]string{
@@ -116,6 +117,11 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacyStatu
 			{`^## Validation[[:space:]]*$`, "must include Validation"},
 			{`^## Success Criteria Status[[:space:]]*$`, "must include Success Criteria Status"},
 		}
+		if !allowLegacy {
+			checks = append(checks,
+				[2]string{`^## Changes[[:space:]]*$`, "must include Changes"},
+				[2]string{`^## Unresolved Risks[[:space:]]*$`, "must include Unresolved Risks"})
+		}
 		return checkArtifactLines(content, checks, event, path)
 	case eventReview:
 		round := artifactRound(path, event)
@@ -129,7 +135,16 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacyStatu
 		if statusRequired {
 			checks = append(checks, [2]string{statusCompletePattern, "must set Status: complete"})
 		}
-		return checkArtifactLines(content, checks, event, path)
+		if err := checkArtifactLines(content, checks, event, path); err != nil {
+			return err
+		}
+		if allowLegacy {
+			return nil
+		}
+		if items := countSectionItems(content, "## Suggested User Checks"); items < 3 || items > 5 {
+			return fmt.Errorf("artifact-check: %s artifact must list three to five Suggested User Checks, found %d: %s", event, items, path)
+		}
+		return nil
 	case eventClose:
 		checks := [][2]string{
 			{`^# CLOSE: .+`, "must have a CLOSE title"},
@@ -141,6 +156,29 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacyStatu
 		return checkArtifactLines(content, checks, event, path)
 	}
 	return nil
+}
+
+var listItemPattern = regexp.MustCompile(`^[-*]\s+\S|^[0-9]+\.\s+\S`)
+
+// countSectionItems counts the list items directly under a heading, so a
+// REVIEW can be held to the three-to-five manual checks the protocol requires.
+func countSectionItems(content, heading string) int {
+	lines := strings.Split(content, "\n")
+	items, inSection := 0, false
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "## ") {
+			if inSection {
+				break
+			}
+			inSection = trimmed == heading
+			continue
+		}
+		if inSection && listItemPattern.MatchString(trimmed) {
+			items++
+		}
+	}
+	return items
 }
 
 func checkArtifactLines(content string, checks [][2]string, event, path string) error {

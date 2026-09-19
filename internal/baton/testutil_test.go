@@ -194,10 +194,14 @@ Task ID: %s
 Date: 2026-07-11
 Executor: test
 Status: complete
+## Changes
+- Touched the test flow.
 ## Validation
 - Test passed.
 ## Success Criteria Status
 - Flow: met
+## Unresolved Risks
+- None.
 `, round, taskID))
 }
 
@@ -211,6 +215,8 @@ Status: complete
 Result: %s
 ## Suggested User Checks
 - Inspect the output.
+- Rerun the flow.
+- Confirm the artifact path.
 ## Evidence Reviewed
 - Test output.
 `, round, taskID, result))

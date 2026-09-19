@@ -205,3 +205,21 @@ func TestMergeAgentBlock(t *testing.T) {
 		t.Fatal("merge did not append a missing block")
 	}
 }
+
+func TestExecutedRoundMustIncrement(t *testing.T) {
+	harness := newHarness(t)
+	taskID, key := parseRoundOutput(t, harness.run(t, "new-round", "round-order", "--summary", "Round order"))
+	planPath := ".baton/runs/" + key + "-PLAN.md"
+	writePlan(t, harness.app.ProjectDir, planPath, taskID)
+	harness.run(t, "append", eventPlanned, "--task-id", taskID, "--role", "Planner", "--summary", "Plan complete", "--path", planPath)
+
+	skipped := ".baton/runs/" + key + "-RUN-05.md"
+	writeRun(t, harness.app.ProjectDir, skipped, taskID, "05")
+	if err := harness.fail("append", eventExecuted, "--task-id", taskID, "--role", "Executor", "--summary", "Run complete", "--path", skipped); err == nil {
+		t.Fatal("append accepted a RUN that skipped rounds")
+	}
+
+	first := ".baton/runs/" + key + "-RUN-01.md"
+	writeRun(t, harness.app.ProjectDir, first, taskID, "01")
+	harness.run(t, "append", eventExecuted, "--task-id", taskID, "--role", "Executor", "--summary", "Run complete", "--path", first)
+}

@@ -137,8 +137,10 @@ Task ID: ` + taskID + `
 Date: 2026-07-11
 Executor: test
 Status: complete
+## Changes
 ## Validation
 ## Success Criteria Status
+## Unresolved Risks
 `
 }
 
@@ -150,6 +152,9 @@ Planner: test
 Status: complete
 Result: ready-for-user-decision
 ## Suggested User Checks
+- Inspect the output.
+- Rerun the flow.
+- Confirm the artifact path.
 ## Evidence Reviewed
 `
 }
@@ -226,4 +231,29 @@ func TestStatusNextCommand(t *testing.T) {
 	if status := harness.run(t, "status", "--task-id", taskID); !strings.Contains(status, wanted) {
 		t.Fatalf("missing %q in %s", wanted, status)
 	}
+}
+
+func TestArtifactRequiresProtocolSections(t *testing.T) {
+	harness := newHarness(t)
+	runPath := ".baton/runs/20260711-1001-sections-RUN-01.md"
+	for _, heading := range []string{"## Changes", "## Unresolved Risks"} {
+		writeArtifact(t, harness.app.ProjectDir, runPath, strings.Replace(validRun("sect", "01"), heading+"\n", "", 1))
+		if err := harness.fail("check-artifact", eventExecuted, runPath, "sect"); err == nil {
+			t.Fatalf("check-artifact accepted a RUN without %s", heading)
+		}
+	}
+	writeArtifact(t, harness.app.ProjectDir, runPath, validRun("sect", "01"))
+	harness.run(t, "check-artifact", eventExecuted, runPath, "sect")
+
+	reviewPath := ".baton/runs/20260711-1001-sections-REVIEW-01.md"
+	for _, checks := range []string{"- One.\n- Two.\n", "- One.\n- Two.\n- Three.\n- Four.\n- Five.\n- Six.\n"} {
+		body := strings.Replace(validReview("sect", "01"),
+			"- Inspect the output.\n- Rerun the flow.\n- Confirm the artifact path.\n", checks, 1)
+		writeArtifact(t, harness.app.ProjectDir, reviewPath, body)
+		if err := harness.fail("check-artifact", eventReview, reviewPath, "sect"); err == nil {
+			t.Fatalf("check-artifact accepted a REVIEW with these checks: %s", checks)
+		}
+	}
+	writeArtifact(t, harness.app.ProjectDir, reviewPath, validReview("sect", "01"))
+	harness.run(t, "check-artifact", eventReview, reviewPath, "sect")
 }

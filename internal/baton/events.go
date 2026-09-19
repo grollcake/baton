@@ -191,6 +191,11 @@ func (a *App) validateArtifactForEvent(records []Record, event, path, taskID str
 	switch event {
 	case eventExecuted:
 		matched, _ = regexp.MatchString("^"+regexp.QuoteMeta(key)+`-RUN-[0-9]{2}\.md$`, path)
+		if matched {
+			if err := validateRunRound(records, taskID, path); err != nil {
+				return err
+			}
+		}
 	case eventReview:
 		matched, _ = regexp.MatchString("^"+regexp.QuoteMeta(key)+`-REVIEW-[0-9]{2}\.md$`, path)
 	case eventClose:
@@ -490,6 +495,27 @@ func (a *App) runStatus(args []string) error {
 	}
 	for _, pending := range a.pendingArtifacts(records, taskID, last) {
 		fmt.Fprintf(a.Stdout, "pending_artifact: %s\n", pending)
+	}
+	return nil
+}
+
+// validateRunRound requires each RUN to continue the round sequence, so
+// feedback opens RUN-<NN+1> and a skipped or reused round is refused.
+func validateRunRound(records []Record, taskID, path string) error {
+	round, err := strconv.Atoi(artifactRound(path, eventExecuted))
+	if err != nil {
+		return fmt.Errorf("invalid RUN round: %s", path)
+	}
+	wanted := 1
+	if executed, found := lastRecord(records, taskID, eventExecuted); found {
+		previous, err := strconv.Atoi(artifactRound(executed.Path, eventExecuted))
+		if err != nil {
+			return fmt.Errorf("invalid RUN round in the log: %s", executed.Path)
+		}
+		wanted = previous + 1
+	}
+	if round != wanted {
+		return fmt.Errorf("EXECUTED round must be %02d for task-id %s, got %02d: %s", wanted, taskID, round, path)
 	}
 	return nil
 }

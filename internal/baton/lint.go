@@ -65,6 +65,19 @@ func (state *lintState) checkAgentBlocks() {
 	}
 }
 
+// checkGitTracking refuses a .baton that Git ignores, because Baton state is
+// project handoff data and must travel with the repository.
+func (state *lintState) checkGitTracking() {
+	if _, err := state.app.runGit("rev-parse", "--git-dir"); err != nil {
+		return
+	}
+	if _, err := state.app.runGit("check-ignore", "--quiet", state.app.BatonDir); err == nil {
+		state.err(".baton is ignored by Git; remove the .gitignore rule that covers it")
+		return
+	}
+	state.ok(".baton is not ignored by Git")
+}
+
 // checkManagedDocuments compares the installed managed documents against the
 // copies this binary shipped with, so a project cannot run a protocol its
 // binary does not implement.
@@ -263,6 +276,7 @@ func (a *App) Lint() error {
 	}
 	state.checkAgentBlocks()
 	state.checkManagedDocuments()
+	state.checkGitTracking()
 	state.checkLog()
 	if state.errors > 0 {
 		return fmt.Errorf("baton-lint failed: %d error(s)", state.errors)
