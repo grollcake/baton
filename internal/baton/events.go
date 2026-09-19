@@ -304,7 +304,25 @@ func (a *App) runGate(args []string) error {
 		return fmt.Errorf("gate failed: %s is not allowed after %s for task-id %s", gate, event, taskID)
 	}
 	record, _ := lastRecord(records, taskID, event)
+	if gate == "before-approval" {
+		if err := a.requireReviewReady(record, taskID); err != nil {
+			return err
+		}
+	}
 	fmt.Fprintln(a.Stdout, record.Raw)
+	return nil
+}
+
+// requireReviewReady blocks the approval gate while the latest REVIEW reports
+// blockers, so a blocked review cannot reach the user as if it were ready.
+func (a *App) requireReviewReady(review Record, taskID string) error {
+	content, err := os.ReadFile(a.projectPath(review.Path))
+	if err != nil {
+		return err
+	}
+	if !hasExactLine(string(content), "Result: ready-for-user-decision") {
+		return fmt.Errorf("gate failed: REVIEW reports blockers for task-id %s; run another EXECUTED -> REVIEW round: %s", taskID, review.Path)
+	}
 	return nil
 }
 

@@ -74,6 +74,12 @@ func TestTransitionMatrixAndAllowedFlows(t *testing.T) {
 		harness.run(t, "append", eventExecuted, "--task-id", taskID, "--role", "Executor", "--summary", "Run complete", "--path", runPath)
 		harness.run(t, "gate", "before-review", "--task-id", taskID)
 		harness.run(t, "append", eventReview, "--task-id", taskID, "--role", "Planner", "--summary", "Review complete", "--path", reviewPath)
+		if result == "blockers" {
+			if err := harness.fail("gate", "before-approval", "--task-id", taskID); err == nil {
+				t.Fatalf("approval gate passed on a review with blockers: round %s", round)
+			}
+			return
+		}
 		harness.run(t, "gate", "before-approval", "--task-id", taskID)
 	}
 	appendRound("01", "blockers")

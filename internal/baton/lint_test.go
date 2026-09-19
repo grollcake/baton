@@ -66,3 +66,29 @@ func TestLintAcceptsLegacyArtifactsWithoutStatus(t *testing.T) {
 		t.Fatal("lint accepted a PLAN with Status: checkpoint")
 	}
 }
+
+func TestLintRejectsCloseAfterBlockers(t *testing.T) {
+	harness := newHarness(t)
+	key := ".baton/runs/20260711-1001-blocked"
+	planPath, runPath := key+"-PLAN.md", key+"-RUN-01.md"
+	reviewPath, closePath := key+"-REVIEW-01.md", key+"-CLOSE.md"
+	writePlan(t, harness.app.ProjectDir, planPath, "blkd")
+	writeRun(t, harness.app.ProjectDir, runPath, "blkd", "01")
+	writeReview(t, harness.app.ProjectDir, reviewPath, "blkd", "01", "blockers")
+	writeClose(t, harness.app.ProjectDir, closePath, "blkd")
+	writeLog(t, harness.app.BatonDir,
+		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
+		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
+		"2026-07-11T10:01:00 | blkd | REQUEST  | Director | Blocked task",
+		"2026-07-11T10:01:01 | blkd | PLANNED  | Planner  | Plan complete | "+planPath,
+		"2026-07-11T10:01:02 | blkd | EXECUTED | Executor | Run complete | "+runPath,
+		"2026-07-11T10:01:03 | blkd | REVIEW   | Planner  | Review complete | "+reviewPath,
+		"2026-07-11T10:01:04 | blkd | CLOSE    | Director | Closed | "+closePath,
+	)
+	if err := harness.fail("lint"); err == nil {
+		t.Fatal("lint accepted a CLOSE that followed a review with blockers")
+	}
+
+	writeReview(t, harness.app.ProjectDir, reviewPath, "blkd", "01", "ready-for-user-decision")
+	harness.run(t, "lint")
+}

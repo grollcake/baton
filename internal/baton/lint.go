@@ -74,6 +74,7 @@ func (state *lintState) checkLog() {
 	taskKeys := map[string]string{}
 	pendingRounds := map[string]string{}
 	pendingKeys := map[string]string{}
+	reviewResults := map[string]string{}
 	legacyLines := 0
 
 	scanner := bufio.NewScanner(file)
@@ -167,9 +168,13 @@ func (state *lintState) checkLog() {
 				delete(pendingRounds, record.TaskID)
 				delete(pendingKeys, record.TaskID)
 			}
+			reviewResults[record.TaskID] = state.app.reviewResult(record.Path)
 		case eventClose:
 			if record.Path != "" && artifactKey(record.Path, record.Event) != taskKeys[record.TaskID] {
 				state.err("CLOSE artifact key does not match PLAN on line %d for task-id %s", lineNumber, record.TaskID)
+			}
+			if result, found := reviewResults[record.TaskID]; found && result != "ready-for-user-decision" {
+				state.err("CLOSE on line %d follows a REVIEW reporting blockers for task-id %s", lineNumber, record.TaskID)
 			}
 		}
 	}
@@ -187,6 +192,19 @@ func (state *lintState) checkLog() {
 		}
 	}
 	state.ok("Baton tasks: %d total, %d closed, %d open", len(lastEvents), closedCount, len(lastEvents)-closedCount)
+}
+
+// reviewResult reports the Result a REVIEW artifact records, so lint can detect
+// a CLOSE that followed a review with blockers.
+func (a *App) reviewResult(path string) string {
+	content, err := os.ReadFile(a.projectPath(path))
+	if err != nil {
+		return ""
+	}
+	if hasExactLine(string(content), "Result: ready-for-user-decision") {
+		return "ready-for-user-decision"
+	}
+	return "blockers"
 }
 
 func (a *App) Lint() error {
