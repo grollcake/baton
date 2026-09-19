@@ -24,3 +24,8 @@
 2026-09-19T18:48:02 | vxym | EXECUTED | Executor | Record the forward PLAN path on REQUEST | .baton/runs/20260919-1837-request-plan-path-RUN-01.md
 2026-09-19T18:51:44 | vxym | REVIEW   | Planner  | Review round 01 | .baton/runs/20260919-1837-request-plan-path-REVIEW-01.md
 2026-09-19T18:59:18 | vxym | CLOSE    | Director | Record the PLAN path on REQUEST so the key survives | .baton/runs/20260919-1837-request-plan-path-CLOSE.md
+2026-09-19T19:02:19 | wqkb | REQUEST  | Director | Stop rejecting command syntax as an unfilled placeholder | .baton/runs/20260919-1902-placeholder-check-PLAN.md
+2026-09-19T19:05:46 | wqkb | PLANNED  | Planner  | Stop rejecting command syntax as an unfilled placeholder | .baton/runs/20260919-1902-placeholder-check-PLAN.md
+2026-09-19T19:09:26 | wqkb | EXECUTED | Executor | Check placeholders by template provenance | .baton/runs/20260919-1902-placeholder-check-RUN-01.md
+2026-09-19T19:14:16 | wqkb | REVIEW   | Planner  | Review round 01 | .baton/runs/20260919-1902-placeholder-check-REVIEW-01.md
+2026-09-19T19:25:24 | wqkb | CLOSE    | Director | Judge placeholders by template provenance, and have delegates self-check | .baton/runs/20260919-1902-placeholder-check-CLOSE.md
