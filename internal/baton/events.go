@@ -267,6 +267,11 @@ func (a *App) runAppend(args []string) error {
 			return err
 		}
 	}
+	if event == eventRequest && path != "" {
+		if err := validateRequestPath(path); err != nil {
+			return err
+		}
+	}
 	record := Record{
 		Timestamp: a.Now().Format("2006-01-02T15:04:05"),
 		TaskID:    taskID, Event: event, Role: role, Summary: summary, Path: path,
@@ -409,15 +414,16 @@ func (a *App) runNewRound(args []string) error {
 	if len(matches) > 0 {
 		return fmt.Errorf("artifact key already exists: %s", key)
 	}
+	planPath := ".baton/runs/" + key + "-PLAN.md"
 	line, err := a.appendRecord(Record{
 		Timestamp: now.Format("2006-01-02T15:04:05"), TaskID: taskID,
-		Event: eventRequest, Role: "Director", Summary: summary,
+		Event: eventRequest, Role: "Director", Summary: summary, Path: planPath,
 	})
 	if err != nil {
 		return err
 	}
 	_ = line
-	fmt.Fprintf(a.Stdout, "task_id='%s'\nkey='%s'\nplan_path='.baton/runs/%s-PLAN.md'\nrun_path_template='.baton/runs/%s-RUN-NN.md'\nreview_path_template='.baton/runs/%s-REVIEW-NN.md'\nclose_path='.baton/runs/%s-CLOSE.md'\n", taskID, key, key, key, key, key)
+	fmt.Fprintf(a.Stdout, "task_id='%s'\nkey='%s'\nplan_path='%s'\nrun_path_template='.baton/runs/%s-RUN-NN.md'\nreview_path_template='.baton/runs/%s-REVIEW-NN.md'\nclose_path='.baton/runs/%s-CLOSE.md'\n", taskID, key, planPath, key, key, key)
 	return nil
 }
 
@@ -577,10 +583,19 @@ func (a *App) reviewReadyForUser(records []Record, taskID string) bool {
 
 // nextCommand builds the delegation prompt command for the next step, so
 // Director runs it instead of recovering the round key from artifact names. It
-// stays empty before PLANNED, where new-round already printed the key, and at
-// REVIEW once the latest review is ready for the user's decision, where the
-// next step is the user's approval rather than a delegation.
+// stays empty at REQUEST when the REQUEST carries no path (an older record or
+// Direct work), and at REVIEW once the latest review is ready for the user's
+// decision, where the next step is the user's approval rather than a
+// delegation.
 func (a *App) nextCommand(records []Record, taskID, last string) string {
+	if last == eventRequest {
+		request, found := lastRecord(records, taskID, eventRequest)
+		if !found || request.Path == "" {
+			return ""
+		}
+		key := filepath.Base(artifactKey(request.Path, eventPlanned))
+		return fmt.Sprintf("baton prompt plan --task-id %s --key %s", taskID, key)
+	}
 	planned, found := lastRecord(records, taskID, eventPlanned)
 	if !found {
 		return ""

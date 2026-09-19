@@ -224,6 +224,22 @@ func TestExecutedRoundMustIncrement(t *testing.T) {
 	harness.run(t, "append", eventExecuted, "--task-id", taskID, "--role", "Executor", "--summary", "Run complete", "--path", first)
 }
 
+func TestAppendRequestPathValidation(t *testing.T) {
+	harness := newHarness(t)
+	forwardPath := ".baton/runs/20260711-1001-slug-PLAN.md"
+	if _, err := os.Stat(harness.app.projectPath(forwardPath)); !os.IsNotExist(err) {
+		t.Fatalf("forward PLAN path unexpectedly exists: %s", forwardPath)
+	}
+	harness.run(t, "append", eventRequest, "--task-id", "areq", "--role", "Director", "--summary", "Forward plan path", "--path", forwardPath)
+
+	if err := harness.fail("append", eventRequest, "--task-id", "atxt", "--role", "Director", "--summary", "Bad shape", "--path", ".baton/runs/notes.txt"); err == nil {
+		t.Fatal("append accepted a REQUEST path that is not a PLAN artifact path")
+	}
+	if err := harness.fail("append", eventRequest, "--task-id", "aout", "--role", "Director", "--summary", "Outside runs", "--path", "../outside-PLAN.md"); err == nil {
+		t.Fatal("append accepted a REQUEST path outside .baton/runs/")
+	}
+}
+
 func TestConcurrentEditingNeedsUserApproval(t *testing.T) {
 	harness := newHarness(t)
 	open := func(slug string) (string, string) {
