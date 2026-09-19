@@ -114,6 +114,26 @@ func TestStatusAfterReviewReadyOffersUserApproval(t *testing.T) {
 	}
 }
 
+func TestStatusOffersPlanCommandAtRequest(t *testing.T) {
+	harness := newHarness(t)
+	taskID, key := parseRoundOutput(t, harness.run(t, "new-round", "request-plan", "--summary", "Request plan flow"))
+
+	planPath := ".baton/runs/" + key + "-PLAN.md"
+	logged := readFile(t, harness.app.batonPath("baton.log"))
+	if !strings.Contains(string(logged), planPath) {
+		t.Fatalf("REQUEST line missing forward PLAN path %s: %s", planPath, logged)
+	}
+	if _, err := os.Stat(harness.app.projectPath(planPath)); !os.IsNotExist(err) {
+		t.Fatalf("PLAN artifact should not exist yet: %s", planPath)
+	}
+
+	wanted := "next_command: baton prompt plan --task-id " + taskID + " --key " + key
+	if status := harness.run(t, "status", "--task-id", taskID); !strings.Contains(status, wanted) {
+		t.Fatalf("missing %q in %s", wanted, status)
+	}
+	harness.run(t, "lint")
+}
+
 func TestStatusAfterMissingReviewArtifactOffersNextExecutedRound(t *testing.T) {
 	// The REVIEW was logged as ready-for-user-decision, but its artifact file
 	// is gone from disk by the time status runs (removed, moved, or never

@@ -150,12 +150,19 @@ func (state *lintState) checkLog() {
 			state.err("missing path on line %d: %s", lineNumber, record.Event)
 		}
 		if record.Path != "" {
-			if requiresArtifact {
+			switch {
+			case requiresArtifact:
 				if artifactErr := state.app.checkArtifact(record.Event, record.Path, record.TaskID, true); artifactErr != nil {
 					state.err("Baton log line %d: %s", lineNumber, artifactErr)
 				}
-			} else if info, statErr := os.Stat(state.app.projectPath(record.Path)); statErr != nil || info.IsDir() {
-				state.err("artifact path not found on line %d: %s", lineNumber, record.Path)
+			case record.Event == eventRequest:
+				if pathErr := validateRequestPath(record.Path); pathErr != nil {
+					state.err("Baton log line %d: %s", lineNumber, pathErr)
+				}
+			default:
+				if info, statErr := os.Stat(state.app.projectPath(record.Path)); statErr != nil || info.IsDir() {
+					state.err("artifact path not found on line %d: %s", lineNumber, record.Path)
+				}
 			}
 		}
 

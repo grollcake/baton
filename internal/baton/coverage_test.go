@@ -219,8 +219,9 @@ func TestStatusPromptAndGateBranches(t *testing.T) {
 func TestStatusNextCommand(t *testing.T) {
 	harness := newHarness(t)
 	taskID, key := parseRoundOutput(t, harness.run(t, "new-round", "next-command", "--summary", "Next command flow"))
-	if strings.Contains(harness.run(t, "status", "--task-id", taskID), "next_command:") {
-		t.Fatal("status offered a next command before PLANNED")
+	wantedPlan := "next_command: baton prompt plan --task-id " + taskID + " --key " + key
+	if status := harness.run(t, "status", "--task-id", taskID); !strings.Contains(status, wantedPlan) {
+		t.Fatalf("missing %q in %s", wantedPlan, status)
 	}
 
 	planPath := ".baton/runs/" + key + "-PLAN.md"

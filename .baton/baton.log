@@ -19,3 +19,8 @@
 2026-09-19T17:52:37 | jiaq | EXECUTED | Executor | Require Plan Deviations in new CLOSE artifacts | .baton/runs/20260919-1746-close-deviations-RUN-01.md
 2026-09-19T17:55:27 | jiaq | REVIEW   | Planner  | Review round 01 | .baton/runs/20260919-1746-close-deviations-REVIEW-01.md
 2026-09-19T17:58:04 | jiaq | CLOSE    | Director | Require Plan Deviations in new CLOSE artifacts | .baton/runs/20260919-1746-close-deviations-CLOSE.md
+2026-09-19T18:37:09 | vxym | REQUEST  | Director | Record the PLAN path on REQUEST so the key survives
+2026-09-19T18:40:04 | vxym | PLANNED  | Planner  | Record the PLAN path on REQUEST | .baton/runs/20260919-1837-request-plan-path-PLAN.md
+2026-09-19T18:48:02 | vxym | EXECUTED | Executor | Record the forward PLAN path on REQUEST | .baton/runs/20260919-1837-request-plan-path-RUN-01.md
+2026-09-19T18:51:44 | vxym | REVIEW   | Planner  | Review round 01 | .baton/runs/20260919-1837-request-plan-path-REVIEW-01.md
+2026-09-19T18:59:18 | vxym | CLOSE    | Director | Record the PLAN path on REQUEST so the key survives | .baton/runs/20260919-1837-request-plan-path-CLOSE.md

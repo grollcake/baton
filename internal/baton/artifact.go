@@ -57,6 +57,16 @@ func validateArtifactPath(event, path string) error {
 	return nil
 }
 
+// validateRequestPath validates the forward reference a REQUEST may carry:
+// the PLAN artifact the task will produce. It checks shape only, because the
+// file does not exist when new-round records it.
+func validateRequestPath(path string) error {
+	if validateArtifactPath(eventPlanned, path) != nil {
+		return fmt.Errorf("artifact-check: REQUEST path must be a PLAN artifact path under .baton/runs/: %s", path)
+	}
+	return nil
+}
+
 func (a *App) CheckArtifact(event, path, expectedTaskID string) error {
 	return a.checkArtifact(event, path, expectedTaskID, false)
 }

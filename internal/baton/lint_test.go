@@ -25,6 +25,78 @@ func TestLintDoesNotExecutePaths(t *testing.T) {
 	}
 }
 
+func TestLintAcceptsPathlessRequest(t *testing.T) {
+	harness := newHarness(t)
+	writeLog(t, harness.app.BatonDir,
+		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
+		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
+		"2026-07-11T10:01:00 | preq | REQUEST  | Director | Pathless request",
+	)
+	harness.run(t, "lint")
+	status := harness.run(t, "status", "--task-id", "preq")
+	if strings.Contains(status, "next_command:") {
+		t.Fatalf("pathless REQUEST should not offer a next_command: %s", status)
+	}
+
+	planPath := ".baton/runs/20260711-1001-preq-PLAN.md"
+	writePlan(t, harness.app.ProjectDir, planPath, "preq")
+	writeLog(t, harness.app.BatonDir,
+		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
+		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
+		"2026-07-11T10:01:00 | preq | REQUEST  | Director | Pathless request",
+		"2026-07-11T10:01:01 | preq | PLANNED  | Planner  | Plan complete | "+planPath,
+	)
+	harness.run(t, "lint")
+}
+
+func TestLintRejectsMissingPlannedArtifact(t *testing.T) {
+	harness := newHarness(t)
+	planPath := ".baton/runs/20260711-1001-missing-PLAN.md"
+	writeLog(t, harness.app.BatonDir,
+		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
+		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
+		"2026-07-11T10:01:00 | miss | REQUEST  | Director | Missing plan",
+		"2026-07-11T10:01:01 | miss | PLANNED  | Planner  | Plan complete | "+planPath,
+	)
+	if err := harness.fail("lint"); err == nil {
+		t.Fatal("lint accepted a PLANNED artifact that does not exist on disk")
+	}
+}
+
+func TestLintRejectsMissingFeedbackOrRunDonePath(t *testing.T) {
+	harness := newHarness(t)
+	missingRun := ".baton/runs/20260711-1001-missing-RUN-01.md"
+	writeLog(t, harness.app.BatonDir,
+		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
+		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
+		"2026-07-11T10:01:00 | fdbk | REQUEST  | Director | Feedback missing path",
+		"2026-07-11T10:01:01 | fdbk | RUN_DONE | Director | Direct work done | "+missingRun,
+	)
+	if err := harness.fail("lint"); err == nil {
+		t.Fatal("lint accepted a RUN_DONE path that does not exist on disk")
+	}
+
+	planPath := ".baton/runs/20260711-1001-fdbk2-PLAN.md"
+	runPath := ".baton/runs/20260711-1001-fdbk2-RUN-01.md"
+	reviewPath := ".baton/runs/20260711-1001-fdbk2-REVIEW-01.md"
+	missingReview := ".baton/runs/20260711-1001-fdbk2-missing.md"
+	writePlan(t, harness.app.ProjectDir, planPath, "fdb2")
+	writeRun(t, harness.app.ProjectDir, runPath, "fdb2", "01")
+	writeReview(t, harness.app.ProjectDir, reviewPath, "fdb2", "01", "blockers")
+	writeLog(t, harness.app.BatonDir,
+		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
+		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
+		"2026-07-11T10:01:00 | fdb2 | REQUEST  | Director | Feedback missing path",
+		"2026-07-11T10:01:01 | fdb2 | PLANNED  | Planner  | Plan complete | "+planPath,
+		"2026-07-11T10:01:02 | fdb2 | EXECUTED | Executor | Run complete | "+runPath,
+		"2026-07-11T10:01:03 | fdb2 | REVIEW   | Planner  | Review complete | "+reviewPath,
+		"2026-07-11T10:01:04 | fdb2 | FEEDBACK | Director | Feedback given | "+missingReview,
+	)
+	if err := harness.fail("lint"); err == nil {
+		t.Fatal("lint accepted a FEEDBACK path that does not exist on disk")
+	}
+}
+
 func TestLintRejectsLegacyScriptsDirectory(t *testing.T) {
 	harness := newHarness(t)
 	if err := os.MkdirAll(harness.app.batonPath("scripts"), 0o755); err != nil {
