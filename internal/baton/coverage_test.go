@@ -183,13 +183,16 @@ func TestStatusPromptAndGateBranches(t *testing.T) {
 	for _, testCase := range []struct {
 		role, wanted string
 	}{
-		{"plan", "Planner for round"},
-		{"review", "Planner REVIEW phase"},
-		{"exec", "Executor for assigned round"},
+		{"plan", "You are Planner for task `abcd`, PLAN phase"},
+		{"review", "You are Planner for task `abcd`, REVIEW phase of round `02`"},
+		{"exec", "You are Executor for task `abcd`, round `02`"},
 	} {
 		output := harness.run(t, "prompt", testCase.role, "--task-id", "abcd", "--key", "20260711-1000-test", "--run-number", "02")
 		if !strings.Contains(output, testCase.wanted) {
 			t.Fatalf("unexpected %s prompt: %s", testCase.role, output)
+		}
+		if !strings.Contains(output, "Director-owned commands (new-round, append, gate, feedback, update) are not yours to run") {
+			t.Fatalf("%s prompt does not name the Director-owned commands: %s", testCase.role, output)
 		}
 	}
 	if err := harness.fail("prompt", "unknown", "--task-id", "abcd", "--key", "key"); err == nil {

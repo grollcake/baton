@@ -4,12 +4,14 @@
 
 ## Baton
 
-This project follows Baton. Read `.baton/PROTOCOL.md`, then read
-only your role file:
+This project follows Baton. Decide your role first, then read
+`.baton/PROTOCOL.md` and only that role's file:
 
-- Director: `.baton/DIRECTOR.md`
-- Planner: `.baton/PLANNER.md`
-- Executor: `.baton/EXECUTOR.md`
+- Answering the user directly: you are Director; read `.baton/DIRECTOR.md`.
+- Given a Baton delegation prompt: you are the role it names, for that task
+  only; read `.baton/PLANNER.md` or `.baton/EXECUTOR.md`.
+- Neither applies, so you were resumed without a delegation prompt: ask
+  before running any `baton` command or writing under `.baton/`.
 
 1. At the start of each recordable phase, read `.baton/GUIDANCE.md`, the
    `.baton/LESSON-LEARNED.md` index, and only matching lesson records.

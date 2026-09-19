@@ -169,7 +169,7 @@ func TestCommandSmoke(t *testing.T) {
 		t.Fatal("summary delimiter passed")
 	}
 	prompt := harness.run(t, "prompt", "plan", "--task-id", "abcd", "--key", "20260711-1000-test")
-	if !strings.Contains(prompt, "Planner for round `abcd`") {
+	if !strings.Contains(prompt, "You are Planner for task `abcd`") {
 		t.Fatalf("unexpected prompt: %s", prompt)
 	}
 	version := strings.TrimSpace(harness.run(t, "version"))

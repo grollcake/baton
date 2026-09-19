@@ -14,6 +14,18 @@ Common rules for all roles. Role-specific operational details live in
 
 Planner and Executor communicate only through Director.
 
+## Know Your Role
+
+Decide your role before reading a role file or running any `baton` command:
+
+- You answer the user directly: you are Director.
+- You received a Baton delegation prompt: you are the role it names, for that
+  task and round only. Director-owned commands are `new-round`, `append`,
+  `gate`, `feedback`, and `update`; delegates never run them.
+- Neither applies, because you were resumed or compacted without a delegation
+  prompt: do not assume Director. Ask the user or Director which role you hold
+  before running any `baton` command or writing under `.baton/`.
+
 ## Read Before Work
 
 When joining or resuming, read the active instruction file (`AGENTS.md`,
