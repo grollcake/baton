@@ -9,3 +9,8 @@
 
 # Baton state is project handoff data and must be committed.
 # Do not add a generic ".baton/" rule here.
+#
+# This repository is Baton's own source, so .baton/bin/ would be a seventh
+# copy of a binary that bootstrap/.baton/bin/ already ships for six platforms.
+# Reinstall or rebuild it locally; everything else under .baton/ is committed.
+/.baton/bin/

@@ -147,6 +147,15 @@ baton models set <codex|claude-code> --director <model> --planner <model> --exec
 `bootstrap/.baton/bin/SHA256SUMS`를 갱신한다. 바이너리와 체크섬은 함께
 커밋하며 부트스트랩과 업데이트에서 무결성을 검증한다.
 
+이 저장소 자체에도 Baton이 설치되어 있다. `.baton/bin/`만 Git에서 제외하므로
+클론한 뒤 `.baton/bin/baton lint`를 쓰려면 자기 플랫폼 바이너리를 먼저 놓는다.
+
+```text
+cp bootstrap/.baton/bin/<os>-<arch>/baton .baton/bin/baton
+cp bootstrap/.baton/bin/SHA256SUMS .baton/bin/SHA256SUMS
+chmod +x .baton/bin/baton
+```
+
 ## 운영 원칙
 
 - Director만 `baton.log`와 작업 상태를 변경한다.
