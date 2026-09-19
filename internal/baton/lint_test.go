@@ -92,3 +92,33 @@ func TestLintRejectsCloseAfterBlockers(t *testing.T) {
 	writeReview(t, harness.app.ProjectDir, reviewPath, "blkd", "01", "ready-for-user-decision")
 	harness.run(t, "lint")
 }
+
+func TestLintDetectsManagedDocumentDrift(t *testing.T) {
+	harness := newHarness(t)
+	harness.run(t, "lint")
+
+	path := harness.app.batonPath("PROTOCOL.md")
+	content := append(readFile(t, path), []byte("\nLocally edited rule.\n")...)
+	if err := os.WriteFile(path, content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := harness.fail("lint"); err == nil {
+		t.Fatal("lint accepted a managed document that differs from the shipped copy")
+	}
+}
+
+func TestGuidePrintsShippedDocuments(t *testing.T) {
+	harness := newHarness(t)
+	if output := harness.run(t, "guide", "protocol"); !strings.Contains(output, "# Baton Protocol") {
+		t.Fatalf("unexpected protocol guide: %s", output)
+	}
+	if output := harness.run(t, "guide", "director"); !strings.Contains(output, "# Director Protocol") {
+		t.Fatalf("unexpected director guide: %s", output)
+	}
+	if err := harness.fail("guide", "nope"); err == nil {
+		t.Fatal("guide accepted an unknown document")
+	}
+	if err := harness.fail("guide"); err == nil {
+		t.Fatal("guide accepted missing arguments")
+	}
+}

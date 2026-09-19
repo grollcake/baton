@@ -99,24 +99,12 @@ without separate confirmation.
 ## Director Tools
 
 Use `.baton/bin/baton` on macOS/Linux or
-`.baton/bin/baton.exe` on Windows. The table uses `<baton>`
-for that platform-specific path.
+`.baton/bin/baton.exe` on Windows. `<baton>` below stands for that
+platform-specific path.
 
-| Stage | Command |
-| --- | --- |
-| Start Standard work | `<baton> new-round <slug> --summary <text>` |
-| Build delegation prompt | `<baton> prompt <plan|exec|review> --task-id <id> --key <key> [--run-number <NN>]` |
-| List role models | `<baton> models list <codex|claude-code>` |
-| Read previous role models | `<baton> models get <codex|claude-code>` |
-| Save role models | `<baton> models set <codex|claude-code> --director <model> [--director-effort <level>] --planner <model> [--planner-effort <level>] --executor <model> [--executor-effort <level>]` |
-| Append event | `<baton> append <EVENT> --task-id <id> --role <role> --summary <text> [--path <path>]` |
-| Await delegated artifact | `<baton> await <PLANNED|EXECUTED|REVIEW> <path> [--task-id <id>] [--timeout <duration>]` |
-| Check next gate | `<baton> gate <before-execute|before-review|before-approval> --task-id <id>` |
-| Record feedback | `<baton> feedback --task-id <id> --summary <text>` |
-| Inspect open task | `<baton> status [--task-id <id>]` |
-| Lint Baton state | `<baton> lint` |
-| Merge Baton block | `<baton> merge-agent-block <target-file> <source-file>` |
-| Update Baton | `<baton> update --upstream <repo> [--apply]` |
+Run `<baton> help` for the command list and `<baton> guide <role>` for
+the document this binary shipped with. The binary is the source of truth for
+its own commands and flags.
 
 Run `<baton> gate ...` before delegating the next stage. If the prior
 event is missing, stop delegation and append or repair the Director-owned state.

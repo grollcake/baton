@@ -2,11 +2,14 @@ package baton
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	docs "github.com/grollcake/baton"
 )
 
 type lintState struct {
@@ -59,6 +62,25 @@ func (state *lintState) checkAgentBlocks() {
 		state.err("AGENTS.md and CLAUDE.md Baton blocks differ")
 	} else {
 		state.ok("AGENTS.md and CLAUDE.md Baton blocks match")
+	}
+}
+
+// checkManagedDocuments compares the installed managed documents against the
+// copies this binary shipped with, so a project cannot run a protocol its
+// binary does not implement.
+func (state *lintState) checkManagedDocuments() {
+	for _, name := range managedBatonFiles {
+		installed, err := os.ReadFile(state.app.batonPath(name))
+		if err != nil {
+			continue
+		}
+		shipped, err := docs.Managed(name)
+		if err != nil {
+			continue
+		}
+		if !bytes.Equal(bytes.TrimRight(installed, "\n"), bytes.TrimRight(shipped, "\n")) {
+			state.err("%s differs from the copy this baton binary shipped with; run an update", name)
+		}
 	}
 }
 
@@ -240,6 +262,7 @@ func (a *App) Lint() error {
 		state.err("legacy protocol-guard must be removed")
 	}
 	state.checkAgentBlocks()
+	state.checkManagedDocuments()
 	state.checkLog()
 	if state.errors > 0 {
 		return fmt.Errorf("baton-lint failed: %d error(s)", state.errors)

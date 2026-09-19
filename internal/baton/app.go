@@ -111,6 +111,8 @@ func (a *App) Run(args []string) error {
 		return a.runCheckArtifact(args)
 	case "await":
 		return a.runAwait(args)
+	case "guide":
+		return a.runGuide(args)
 	case "lint":
 		return a.Lint()
 	case "merge-agent-block":
@@ -129,20 +131,29 @@ func (a *App) Run(args []string) error {
 }
 
 func (a *App) usage() {
-	fmt.Fprint(a.Stdout, `Usage:
-  baton append <EVENT> --task-id <id> --role <role> --summary <text> [--path <path>]
-  baton gate <before-execute|before-review|before-approval> --task-id <id>
-  baton new-round <slug> --summary <text> [--branch <name>]
-  baton feedback --task-id <id> --summary <text>
-  baton status [--task-id <id>]
-  baton prompt <plan|review|exec> --task-id <id> --key <key> [--run-number <NN>]
-  baton models <list|get|set> <codex|claude-code> [model options]
-  baton check-artifact <PLANNED|EXECUTED|REVIEW|CLOSE> <path> [task-id]
-  baton await <PLANNED|EXECUTED|REVIEW> <path> [--task-id <id>] [--timeout <duration>]
-  baton lint
-  baton merge-agent-block <target-file> <source-file>
-  baton update --upstream <baton-repo> [--apply]
-  baton version
+	fmt.Fprint(a.Stdout, `Usage: baton <command> [flags]
+
+Start Standard work:
+  new-round <slug> --summary <text> [--branch <name>]
+
+Delegate a stage:
+  prompt <plan|review|exec> --task-id <id> --key <key> [--run-number <NN>]
+  await <PLANNED|EXECUTED|REVIEW> <path> [--task-id <id>] [--timeout <duration>]
+  check-artifact <PLANNED|EXECUTED|REVIEW|CLOSE> <path> [task-id]
+
+Record and inspect state:
+  append <EVENT> --task-id <id> --role <role> --summary <text> [--path <path>]
+  feedback --task-id <id> --summary <text>
+  gate <before-execute|before-review|before-approval> --task-id <id>
+  status [--task-id <id>]
+
+Configure and maintain:
+  models <list|get|set> <codex|claude-code> [model options]
+  guide <protocol|director|planner|executor|update>
+  lint
+  merge-agent-block <target-file> <source-file>
+  update --upstream <baton-repo> [--apply]
+  version
 `)
 }
 

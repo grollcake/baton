@@ -52,8 +52,10 @@ func TestRunHelpUnknownAndArgumentErrors(t *testing.T) {
 	harness := newHarness(t)
 	for _, args := range [][]string{{"help"}, {"--help"}, {"-h"}} {
 		output := harness.run(t, args...)
-		if !strings.Contains(output, "baton append") {
-			t.Fatalf("help output missing commands: %s", output)
+		for _, command := range []string{"new-round", "prompt", "append", "gate", "status", "guide", "lint", "update"} {
+			if !strings.Contains(output, command) {
+				t.Fatalf("help output missing %s: %s", command, output)
+			}
 		}
 	}
 	for _, args := range [][]string{
