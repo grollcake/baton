@@ -1,3 +1,3 @@
-module github.com/grollcake/memento
+module github.com/grollcake/baton
 
 go 1.26.0

@@ -7,5 +7,5 @@
 .idea/
 .vscode/
 
-# Memento AI state is project handoff data and must be committed.
-# Do not add a generic ".memento/" rule here.
+# Baton state is project handoff data and must be committed.
+# Do not add a generic ".baton/" rule here.

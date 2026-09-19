@@ -30,10 +30,10 @@ func main() {
 	if err != nil {
 		fatal(err)
 	}
-	binRoot := filepath.Join(root, "bootstrap", ".memento", "bin")
+	binRoot := filepath.Join(root, "bootstrap", ".baton", "bin")
 	checksums := make([]string, 0, len(targets))
 	for _, target := range targets {
-		name := "memento"
+		name := "baton"
 		if target.os == "windows" {
 			name += ".exe"
 		}
@@ -42,7 +42,7 @@ func main() {
 		if err := os.MkdirAll(filepath.Dir(output), 0o755); err != nil {
 			fatal(err)
 		}
-		command := exec.Command("go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w", "-o", output, "./cmd/memento")
+		command := exec.Command("go", "build", "-trimpath", "-buildvcs=false", "-ldflags=-s -w", "-o", output, "./cmd/baton")
 		command.Dir = root
 		command.Env = append(os.Environ(), "CGO_ENABLED=0", "GOOS="+target.os, "GOARCH="+target.arch)
 		command.Stdout = os.Stdout

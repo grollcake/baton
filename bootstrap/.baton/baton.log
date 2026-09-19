@@ -1,0 +1,2 @@
+<YYYY-MM-DDTHH:MM:SS> | <task-id> | REQUEST  | Director | Bootstrap Baton
+<YYYY-MM-DDTHH:MM:SS> | <task-id> | RUN_DONE | Director | Baton initialized

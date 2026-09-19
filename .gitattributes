@@ -1,3 +1,3 @@
 * text=auto eol=lf
-bootstrap/.memento/bin/** binary
-bootstrap/.memento/bin/SHA256SUMS text eol=lf diff
+bootstrap/.baton/bin/** binary
+bootstrap/.baton/bin/SHA256SUMS text eol=lf diff

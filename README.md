@@ -1,10 +1,10 @@
-# Memento AI
+# Baton
 
 > **Every run remembered. Every result better.**
 
-Memento AI는 AI 에이전트가 계획·구현·검토 역할을 나누고, 파일로 작업 맥락을 이어가는 협업 규약이다. 에이전트나 세션이 바뀌어도 기록을 바탕으로 작업을 계속할 수 있게 한다.
+Baton은 AI 에이전트가 계획·구현·검토 역할을 나누고, 파일로 작업 맥락을 이어가는 협업 규약이다. 에이전트나 세션이 바뀌어도 기록을 바탕으로 작업을 계속할 수 있게 한다.
 
-> **AI 에이전트에게**: 이 저장소를 다른 프로젝트에 반영해달라는 요청을 받으면 [부트스트랩 절차](BOOTSTRAP.md)를 따른다. 기존 프로젝트 지침과 Memento AI 상태는 덮어쓰지 않는다.
+> **AI 에이전트에게**: 이 저장소를 다른 프로젝트에 반영해달라는 요청을 받으면 [부트스트랩 절차](BOOTSTRAP.md)를 따른다. 기존 프로젝트 지침과 Baton 상태는 덮어쓰지 않는다.
 
 ## 핵심 개념
 
@@ -18,7 +18,7 @@ Director는 Planner와 Executor에게 작업을 위임하고 사용자 응답 �
 
 작업은 파일에 기록한다.
 
-- `memento.log`: 작업 이벤트 타임라인
+- `baton.log`: 작업 이벤트 타임라인
 - `runs/`: 작업별 계획, 실행, 검토, 종료 기록
 - `GUIDANCE.md`: 세션이 바뀌어도 유지할 지침과 제약
 - `lesson-learned/`: 완료된 작업에서 얻은 재사용 가능한 지식
@@ -28,13 +28,13 @@ Director는 Planner와 Executor에게 작업을 위임하고 사용자 응답 �
 대상 프로젝트에서 에이전트에게 다음처럼 요청한다.
 
 ```text
-github.com/grollcake/memento 를 내 프로젝트에 반영해줘
+github.com/grollcake/baton 를 내 프로젝트에 반영해줘
 ```
 
 이미 설치된 경우에는 다음처럼 요청한다.
 
 ```text
-memento 최신화해줘
+baton 최신화해줘
 ```
 
 설치와 업데이트의 파일별 처리 규칙은 [BOOTSTRAP.md](BOOTSTRAP.md)에 있다.
@@ -45,14 +45,14 @@ memento 최신화해줘
 - Linux: amd64, arm64
 - Windows: amd64, arm64
 
-Memento AI는 Go로 컴파일된 단일 네이티브 바이너리이며 설치된 프로젝트에는
+Baton은 Go로 컴파일된 단일 네이티브 바이너리이며 설치된 프로젝트에는
 Go 런타임이나 특정 셸이 필요하지 않다. Windows에서는 PowerShell, cmd, Git
 Bash에서 실행할 수 있다. Git 연동 기능을 사용하려면 `git`이 `PATH`에 있어야
 한다. 소스 빌드와 테스트에는 Go 1.26 이상이 필요하다.
 
 ## 작업 흐름
 
-Memento AI 세션을 시작할 때마다 Director는 Codex 또는 Claude Code를 감지하고
+Baton 세션을 시작할 때마다 Director는 Codex 또는 Claude Code를 감지하고
 Director·Planner·Executor 모델을 사용자에게 확인한다. 직전 선택을 기본값으로
 보여 주며, 확정된 선택은 저장소가 아닌 OS 사용자 설정에 플랫폼별로 저장한다.
 Director 모델은 `/model`로 맞추고 Planner와 Executor 모델은 위임할 때 명시한다.
@@ -85,13 +85,13 @@ Standard 작업의 기본 흐름은 다음과 같다.
 
 ## 이벤트와 산출물
 
-`memento.log`는 다음 형식의 추가 전용 이벤트 기록이다.
+`baton.log`는 다음 형식의 추가 전용 이벤트 기록이다.
 
 ```text
 <timestamp> | <task-id> | <event> | <role> | <summary> | <path?>
 ```
 
-Standard 작업의 산출물은 `.memento/runs/`에 같은 `<KEY>`로 저장한다.
+Standard 작업의 산출물은 `.baton/runs/`에 같은 `<KEY>`로 저장한다.
 
 | 파일 | 작성자 | 내용 |
 | --- | --- | --- |
@@ -100,12 +100,12 @@ Standard 작업의 산출물은 `.memento/runs/`에 같은 `<KEY>`로 저장한�
 | `<KEY>-REVIEW-<NN>.md` | Planner | 검토 결과 |
 | `<KEY>-CLOSE.md` | Director | 사용자 승인 기록 |
 
-이전 라운드는 보존한다. 자세한 이벤트 전이와 파일 규칙은 [프로토콜](bootstrap/.memento/PROTOCOL.md)을 따른다.
+이전 라운드는 보존한다. 자세한 이벤트 전이와 파일 규칙은 [프로토콜](bootstrap/.baton/PROTOCOL.md)을 따른다.
 
 ## 설치 후 구조
 
 ```text
-.memento/
+.baton/
 ├── PROTOCOL.md
 ├── DIRECTOR.md
 ├── PLANNER.md
@@ -115,18 +115,18 @@ Standard 작업의 산출물은 `.memento/runs/`에 같은 `<KEY>`로 저장한�
 ├── GUIDANCE.md
 ├── LESSON-LEARNED.md
 ├── bin/
-│   ├── memento[.exe]
+│   ├── baton[.exe]
 │   └── SHA256SUMS
 ├── lesson-learned/
-├── memento.log
+├── baton.log
 ├── runs/
 └── templates/
 ```
 
-`.memento/`는 프로젝트 인수인계 데이터이므로 Git에 포함한다.
+`.baton/`는 프로젝트 인수인계 데이터이므로 Git에 포함한다.
 
-`memento[.exe]`는 Director가 작업 상태 관리와 검증에 사용하는 CLI다. 자세한
-명령 사용법은 [Director 프로토콜](bootstrap/.memento/DIRECTOR.md)을 따른다.
+`baton[.exe]`는 Director가 작업 상태 관리와 검증에 사용하는 CLI다. 자세한
+명령 사용법은 [Director 프로토콜](bootstrap/.baton/DIRECTOR.md)을 따른다.
 
 ## 개발과 바이너리 빌드
 
@@ -138,29 +138,29 @@ go run ./cmd/build-release
 역할별 모델 설정 명령은 다음과 같다.
 
 ```text
-memento models list <codex|claude-code>
-memento models get <codex|claude-code>
-memento models set <codex|claude-code> --director <model> --planner <model> --executor <model>
+baton models list <codex|claude-code>
+baton models get <codex|claude-code>
+baton models set <codex|claude-code> --director <model> --planner <model> --executor <model>
 ```
 
 `build-release`는 `CGO_ENABLED=0`으로 지원 플랫폼 6종을 빌드하고
-`bootstrap/.memento/bin/SHA256SUMS`를 갱신한다. 바이너리와 체크섬은 함께
+`bootstrap/.baton/bin/SHA256SUMS`를 갱신한다. 바이너리와 체크섬은 함께
 커밋하며 부트스트랩과 업데이트에서 무결성을 검증한다.
 
 ## 운영 원칙
 
-- Director만 `memento.log`와 작업 상태를 변경한다.
+- Director만 `baton.log`와 작업 상태를 변경한다.
 - Executor는 계획 범위를 임의로 넓히지 않는다.
 - Standard 작업은 사용자의 명시적 승인 전에는 종료하지 않는다.
 - 사용자에게 보고된 결함은 증거를 확보한 뒤 수정하고 스모크 테스트를 남긴다.
-- `.memento/`에 비밀정보, 자격증명, 개인정보, 민감한 운영정보를 저장하지 않는다.
-- Memento AI가 설치된 프로젝트에서는 커밋 전이나 업데이트 후
-  `.memento/bin/memento[.exe] lint`로 기록 상태를 검증한다.
+- `.baton/`에 비밀정보, 자격증명, 개인정보, 민감한 운영정보를 저장하지 않는다.
+- Baton이 설치된 프로젝트에서는 커밋 전이나 업데이트 후
+  `.baton/bin/baton[.exe] lint`로 기록 상태를 검증한다.
 - 이 저장소 자체의 변경은 `go test ./...`로 회귀 테스트한다.
 
 ## 더 읽기
 
 - [BOOTSTRAP.md](BOOTSTRAP.md) — 설치와 업데이트 절차
 - [PROTOCOL-GUIDE.md](PROTOCOL-GUIDE.md) — 한국어 상세 가이드
-- [PROTOCOL.md](bootstrap/.memento/PROTOCOL.md) — 공통 규칙
-- [DIRECTOR.md](bootstrap/.memento/DIRECTOR.md), [PLANNER.md](bootstrap/.memento/PLANNER.md), [EXECUTOR.md](bootstrap/.memento/EXECUTOR.md) — 역할별 규칙
+- [PROTOCOL.md](bootstrap/.baton/PROTOCOL.md) — 공통 규칙
+- [DIRECTOR.md](bootstrap/.baton/DIRECTOR.md), [PLANNER.md](bootstrap/.baton/PLANNER.md), [EXECUTOR.md](bootstrap/.baton/EXECUTOR.md) — 역할별 규칙
