@@ -49,3 +49,29 @@ func TestAwaitTimesOutAndRejectsBadArguments(t *testing.T) {
 		}
 	}
 }
+
+func TestAwaitReturnsOnFirstOfSeveralArtifacts(t *testing.T) {
+	harness := newHarness(t)
+	slow := ".baton/runs/20260711-1000-slow-RUN-01.md"
+	fast := ".baton/runs/20260711-1000-fast-RUN-01.md"
+	for _, path := range []string{slow, fast} {
+		writeArtifact(t, harness.app.ProjectDir, path, strings.Replace(validRun("abcd", "01"), "Status: complete", "Status: checkpoint", 1))
+	}
+	sleeps := 0
+	harness.app.Sleep = func(time.Duration) {
+		sleeps++
+		if sleeps == 2 {
+			writeRun(t, harness.app.ProjectDir, fast, "abcd", "01")
+		}
+	}
+	output := harness.run(t, "await", eventExecuted, slow, eventExecuted, fast)
+	if !strings.Contains(output, fast) || strings.Contains(output, slow) {
+		t.Fatalf("await did not return on the first completed artifact: %s", output)
+	}
+	if err := harness.fail("await", eventExecuted, slow, eventExecuted, fast, "--task-id", "abcd"); err == nil {
+		t.Fatal("await accepted --task-id while watching several artifacts")
+	}
+	if err := harness.fail("await", eventExecuted, slow, eventExecuted); err == nil {
+		t.Fatal("await accepted an unpaired event")
+	}
+}

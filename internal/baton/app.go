@@ -138,14 +138,14 @@ Start Standard work:
 
 Delegate a stage:
   prompt <plan|review|exec> --task-id <id> --key <key> [--run-number <NN>]
-  await <PLANNED|EXECUTED|REVIEW> <path> [--task-id <id>] [--timeout <duration>]
+  await <EVENT> <path> [<EVENT> <path>...] [--task-id <id>] [--timeout <duration>]
   check-artifact <PLANNED|EXECUTED|REVIEW|CLOSE> <path> [task-id]
 
 Record and inspect state:
   append <EVENT> --task-id <id> --role <role> --summary <text> [--path <path>]
   feedback --task-id <id> --summary <text>
   gate <before-execute|before-review|before-approval> --task-id <id>
-  status [--task-id <id>]
+  status [--task-id <id>] [--open]
 
 Configure and maintain:
   models <list|get|set> <codex|claude-code> [model options]

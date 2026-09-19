@@ -260,3 +260,26 @@ func TestArtifactRequiresProtocolSections(t *testing.T) {
 	writeArtifact(t, harness.app.ProjectDir, reviewPath, validReview("sect", "01"))
 	harness.run(t, "check-artifact", eventReview, reviewPath, "sect")
 }
+
+func TestStatusListsOpenTasks(t *testing.T) {
+	harness := newHarness(t)
+	first, _ := parseRoundOutput(t, harness.run(t, "new-round", "open-one", "--summary", "Open one"))
+	second, _ := parseRoundOutput(t, harness.run(t, "new-round", "open-two", "--summary", "Open two"))
+
+	plain := harness.run(t, "status")
+	if strings.Contains(plain, first) {
+		t.Fatalf("status without --open should show one task: %s", plain)
+	}
+	output := harness.run(t, "status", "--open")
+	for _, taskID := range []string{first, second} {
+		if !strings.Contains(output, "open_task: "+taskID) {
+			t.Fatalf("status --open missing %s: %s", taskID, output)
+		}
+	}
+	if !strings.Contains(output, "open_tasks: 2") {
+		t.Fatalf("unexpected open count: %s", output)
+	}
+	if err := harness.fail("status", "--open", "--task-id", first); err == nil {
+		t.Fatal("status accepted --open with --task-id")
+	}
+}

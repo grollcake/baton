@@ -434,7 +434,7 @@ func (a *App) runFeedback(args []string) error {
 }
 
 func (a *App) runStatus(args []string) error {
-	parsed, err := parseArguments(args, map[string]bool{"--task-id": true}, nil)
+	parsed, err := parseArguments(args, map[string]bool{"--task-id": true}, map[string]bool{"--open": true})
 	if err != nil {
 		return err
 	}
@@ -444,6 +444,12 @@ func (a *App) runStatus(args []string) error {
 	records, err := a.readRecords()
 	if err != nil {
 		return err
+	}
+	if parsed.flags["--open"] {
+		if parsed.values["--task-id"] != "" {
+			return errors.New("status --open lists every open task and takes no --task-id")
+		}
+		return a.reportOpenTasks(records)
 	}
 	taskID := parsed.values["--task-id"]
 	if taskID == "" {
@@ -517,6 +523,33 @@ func validateRunRound(records []Record, taskID, path string) error {
 	if round != wanted {
 		return fmt.Errorf("EXECUTED round must be %02d for task-id %s, got %02d: %s", wanted, taskID, round, path)
 	}
+	return nil
+}
+
+// reportOpenTasks lists every task the log left open, so a Director that
+// started more than one, or inherited work from an earlier session, sees all of
+// them instead of only the task status picks.
+func (a *App) reportOpenTasks(records []Record) error {
+	closed := map[string]bool{}
+	var order []string
+	for _, record := range records {
+		if record.Event == eventRequest {
+			order = append(order, record.TaskID)
+		}
+		if record.Event == eventClose || record.Event == eventRunDone {
+			closed[record.TaskID] = true
+		}
+	}
+	open := 0
+	for _, taskID := range order {
+		if closed[taskID] {
+			continue
+		}
+		open++
+		request, _ := lastRecord(records, taskID, eventRequest)
+		fmt.Fprintf(a.Stdout, "open_task: %s | last_event: %s | %s\n", taskID, lastEvent(records, taskID), request.Summary)
+	}
+	fmt.Fprintf(a.Stdout, "open_tasks: %d\n", open)
 	return nil
 }
 

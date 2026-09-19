@@ -141,6 +141,13 @@ work. As a safety net for missed notices, while a Standard task is open run
 `<baton> status` once per user message; a `pending_artifact:` line names a
 complete artifact that is not appended yet, so process it the same way.
 
+`<baton> status` reports one task. When more than one task is open, or when
+resuming a session, run `<baton> status --open` for every open task. Parallel
+delegations need one wait, not one per artifact: pass each `<EVENT> <path>`
+pair to a single `<baton> await`, which returns on the first one to complete.
+Baton does not isolate working trees, so do not run two Executors against the
+same checkout at once.
+
 Required gates:
 
 | Next stage | Required prior event |
