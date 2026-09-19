@@ -502,6 +502,9 @@ func (a *App) runStatus(args []string) error {
 		eventFeedback: "EXECUTED (resume Executor work)", eventClose: "closed",
 		eventRunDone: "closed (direct work)",
 	}[last]
+	if last == eventReview && !a.reviewReadyForUser(records, taskID) {
+		next = "EXECUTED (delegate Executor)"
+	}
 	fmt.Fprintf(a.Stdout, "next_gate: %s\nbranch: %s\n", valueOr(next, "unknown"), branch)
 	if command := a.nextCommand(records, taskID, last); command != "" {
 		fmt.Fprintf(a.Stdout, "next_command: %s\n", command)
@@ -560,10 +563,23 @@ func (a *App) reportOpenTasks(records []Record) error {
 	return nil
 }
 
+// reviewReadyForUser reports whether the latest REVIEW logged for a task
+// records Result: ready-for-user-decision. It returns false when no REVIEW is
+// logged or when the artifact cannot be read, so callers fail closed toward
+// another EXECUTED round rather than treating an unreadable REVIEW as ready.
+func (a *App) reviewReadyForUser(records []Record, taskID string) bool {
+	review, found := lastRecord(records, taskID, eventReview)
+	if !found {
+		return false
+	}
+	return a.reviewResult(review.Path) == "ready-for-user-decision"
+}
+
 // nextCommand builds the delegation prompt command for the next step, so
 // Director runs it instead of recovering the round key from artifact names. It
 // stays empty before PLANNED, where new-round already printed the key, and at
-// REVIEW, where the next step depends on the user's decision.
+// REVIEW once the latest review is ready for the user's decision, where the
+// next step is the user's approval rather than a delegation.
 func (a *App) nextCommand(records []Record, taskID, last string) string {
 	planned, found := lastRecord(records, taskID, eventPlanned)
 	if !found {
@@ -572,7 +588,10 @@ func (a *App) nextCommand(records []Record, taskID, last string) string {
 	key := filepath.Base(artifactKey(planned.Path, eventPlanned))
 	executed, hasRun := lastRecord(records, taskID, eventExecuted)
 	switch last {
-	case eventPlanned, eventFeedback:
+	case eventPlanned, eventFeedback, eventReview:
+		if last == eventReview && a.reviewReadyForUser(records, taskID) {
+			return ""
+		}
 		round := 1
 		if hasRun {
 			number, err := strconv.Atoi(artifactRound(executed.Path, eventExecuted))

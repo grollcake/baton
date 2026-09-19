@@ -9,3 +9,8 @@
 2026-09-19T17:26:16 | uonl | CLOSE    | Director | Narrow in-flight detection, failing closed on unreadable reviews | .baton/runs/20260919-1700-concurrency-inflight-CLOSE.md
 2026-09-19T17:29:38 | veee | REQUEST  | Director | Refresh the installed .baton/bin after build-release
 2026-09-19T17:30:20 | veee | RUN_DONE | Director | build-release refreshes the installed .baton/bin
+2026-09-19T17:31:56 | qstp | REQUEST  | Director | Make status reflect a REVIEW that reports blockers
+2026-09-19T17:33:42 | qstp | PLANNED  | Planner  | Make status reflect a blocked REVIEW | .baton/runs/20260919-1731-status-blockers-PLAN.md
+2026-09-19T17:36:43 | qstp | EXECUTED | Executor | Status reports another EXECUTED round for a blocked REVIEW | .baton/runs/20260919-1731-status-blockers-RUN-01.md
+2026-09-19T17:40:01 | qstp | REVIEW   | Planner  | Review round 01 | .baton/runs/20260919-1731-status-blockers-REVIEW-01.md
+2026-09-19T17:45:26 | qstp | CLOSE    | Director | Status agrees with the approval gate on a blocked review | .baton/runs/20260919-1731-status-blockers-CLOSE.md
