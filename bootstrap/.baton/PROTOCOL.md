@@ -80,7 +80,8 @@ while any TODO remains. A completed `PLAN`, `RUN`, or `REVIEW` must contain exac
 change summary, validation, and unresolved risks. Use the matching template in
 `.baton/templates/` for every artifact. Artifact `Task ID` values must
 match `baton.log`; all artifacts for a task use the PLAN key, and each REVIEW
-round must match its immediately preceding RUN round.
+round must match its immediately preceding RUN round. Each `CLOSE` records how
+the delivered work differed from its `PLAN`, or `none`.
 
 For user-reported defects, Director passes the report to Executor; Executor
 records evidence before fixing and a self smoke test after fixing.

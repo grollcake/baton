@@ -158,3 +158,28 @@ func TestLintToleratesLegacyRunSections(t *testing.T) {
 		t.Fatal("check-artifact accepted a RUN without the required sections")
 	}
 }
+
+func TestLintToleratesLegacyCloseSections(t *testing.T) {
+	harness := newHarness(t)
+	key := ".baton/runs/20260711-1001-legacy-close"
+	planPath, runPath := key+"-PLAN.md", key+"-RUN-01.md"
+	reviewPath, closePath := key+"-REVIEW-01.md", key+"-CLOSE.md"
+	writePlan(t, harness.app.ProjectDir, planPath, "lgcl")
+	writeRun(t, harness.app.ProjectDir, runPath, "lgcl", "01")
+	writeReview(t, harness.app.ProjectDir, reviewPath, "lgcl", "01", "ready-for-user-decision")
+	legacy := strings.Replace(validClose("lgcl"), "## Plan Deviations\n- none.\n", "", 1)
+	writeArtifact(t, harness.app.ProjectDir, closePath, legacy)
+	writeLog(t, harness.app.BatonDir,
+		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
+		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
+		"2026-07-11T10:01:00 | lgcl | REQUEST  | Director | Legacy close",
+		"2026-07-11T10:01:01 | lgcl | PLANNED  | Planner  | Plan complete | "+planPath,
+		"2026-07-11T10:01:02 | lgcl | EXECUTED | Executor | Run complete | "+runPath,
+		"2026-07-11T10:01:03 | lgcl | REVIEW   | Planner  | Review complete | "+reviewPath,
+		"2026-07-11T10:01:04 | lgcl | CLOSE    | Director | Closed | "+closePath,
+	)
+	harness.run(t, "lint")
+	if err := harness.fail("check-artifact", eventClose, closePath, "lgcl"); err == nil {
+		t.Fatal("check-artifact accepted a CLOSE without Plan Deviations")
+	}
+}

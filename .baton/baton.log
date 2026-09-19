@@ -14,3 +14,8 @@
 2026-09-19T17:36:43 | qstp | EXECUTED | Executor | Status reports another EXECUTED round for a blocked REVIEW | .baton/runs/20260919-1731-status-blockers-RUN-01.md
 2026-09-19T17:40:01 | qstp | REVIEW   | Planner  | Review round 01 | .baton/runs/20260919-1731-status-blockers-REVIEW-01.md
 2026-09-19T17:45:26 | qstp | CLOSE    | Director | Status agrees with the approval gate on a blocked review | .baton/runs/20260919-1731-status-blockers-CLOSE.md
+2026-09-19T17:46:39 | jiaq | REQUEST  | Director | Record plan deviations in CLOSE
+2026-09-19T17:49:38 | jiaq | PLANNED  | Planner  | Record plan deviations in CLOSE | .baton/runs/20260919-1746-close-deviations-PLAN.md
+2026-09-19T17:52:37 | jiaq | EXECUTED | Executor | Require Plan Deviations in new CLOSE artifacts | .baton/runs/20260919-1746-close-deviations-RUN-01.md
+2026-09-19T17:55:27 | jiaq | REVIEW   | Planner  | Review round 01 | .baton/runs/20260919-1746-close-deviations-REVIEW-01.md
+2026-09-19T17:58:04 | jiaq | CLOSE    | Director | Require Plan Deviations in new CLOSE artifacts | .baton/runs/20260919-1746-close-deviations-CLOSE.md

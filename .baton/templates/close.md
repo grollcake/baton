@@ -14,6 +14,10 @@ Reviewed Evidence: <path-to-review>
 
 - `<command or check>`: <result>
 
+## Plan Deviations
+
+- <deviation from the PLAN, or none>
+
 ## Remaining Nits
 
 - <nit or none>

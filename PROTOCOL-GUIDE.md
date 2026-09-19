@@ -120,6 +120,7 @@ Director는 먼저 요청이 명백한 기록 제외 대상인지 가볍게 판�
 - `<YYYYMMDD>`와 `<HHMM>`은 Director가 `REQUEST`를 기록할 때의 로컬 시스템 날짜·시분(24시간, 구분자 없음)을 씁니다. 예: `20260526-1430-diary-write`.
 - `task-id`는 `baton.log` 이벤트 식별자이고, `<YYYYMMDD>-<HHMM>-<SLUG>`는 `.baton/runs/` 산출물 파일 키입니다. 같은 Standard 작업에서는 `task-id` 하나와 파일 키 하나를 함께 씁니다.
 - 같은 작업의 모든 라운드 산출물은 같은 `<YYYYMMDD>-<HHMM>-<SLUG>` 키를 씁니다.
+- 각 `CLOSE`는 완료된 작업이 `PLAN`과 어떻게 달라졌는지, 또는 달라지지 않았다면 `none`을 기록합니다.
 - 산출물은 `.baton/templates/plan.md`, `run.md`, `review.md`, `close.md` 형식을 따릅니다.
 - Executor는 긴 검증 전 `RUN-<NN>.md`를 checkpoint로 먼저 저장할 수 있습니다. TODO나 `<...>` placeholder가 남았거나 `Status: complete`가 아닌 RUN은 완료가 아니며, Director는 완료 검증 전 `EXECUTED`를 기록하지 않습니다.
 - `PLAN`과 `REVIEW`에도 `Status` 줄이 있습니다. Planner는 보고 직전 마지막 쓰기로 정확히 `Status: complete`를 설정하며, Director는 이 줄로 완료를 감지합니다. `Status` 줄이 생기기 전에 작성된 과거 `PLAN`/`REVIEW`는 `baton lint`에서 그대로 통과합니다.

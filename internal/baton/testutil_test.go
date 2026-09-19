@@ -233,6 +233,8 @@ Approved By: User
 - Accepted.
 ## Validation Summary
 - Test passed.
+## Plan Deviations
+- none.
 `, taskID))
 }
 
