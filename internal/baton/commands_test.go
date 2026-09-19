@@ -260,3 +260,73 @@ func TestConcurrentEditingNeedsUserApproval(t *testing.T) {
 		t.Fatal("gate accepted approval that the user did not give")
 	}
 }
+
+// TestInFlightNarrowsToPlannedFeedbackAndBlockedReview proves that a finished
+// task (EXECUTED) and a task awaiting the user's decision (REVIEW with
+// Result: ready-for-user-decision) no longer trip the concurrency gate, while
+// a task at REVIEW with Result: blockers still does, since REVIEW:EXECUTED is
+// a valid transition and that task is about to re-execute.
+func TestInFlightNarrowsToPlannedFeedbackAndBlockedReview(t *testing.T) {
+	openFirst := func(t *testing.T, harness *testHarness, slug string) (string, string) {
+		taskID, key := parseRoundOutput(t, harness.run(t, "new-round", slug, "--summary", "Task "+slug))
+		planPath := ".baton/runs/" + key + "-PLAN.md"
+		writePlan(t, harness.app.ProjectDir, planPath, taskID)
+		harness.run(t, "append", eventPlanned, "--task-id", taskID, "--role", "Planner", "--summary", "Plan complete", "--path", planPath)
+		return taskID, key
+	}
+	driveToExecuted := func(t *testing.T, harness *testHarness, taskID, key string) {
+		runPath := ".baton/runs/" + key + "-RUN-01.md"
+		writeRun(t, harness.app.ProjectDir, runPath, taskID, "01")
+		harness.run(t, "append", eventExecuted, "--task-id", taskID, "--role", "Executor", "--summary", "Run complete", "--path", runPath)
+	}
+	driveToReview := func(t *testing.T, harness *testHarness, taskID, key, result string) {
+		reviewPath := ".baton/runs/" + key + "-REVIEW-01.md"
+		writeReview(t, harness.app.ProjectDir, reviewPath, taskID, "01", result)
+		harness.run(t, "append", eventReview, "--task-id", taskID, "--role", "Planner", "--summary", "Review complete", "--path", reviewPath)
+	}
+	assertNoConcurrencyNeeded := func(t *testing.T, harness *testHarness, blockingSlug string) {
+		second, _ := openFirst(t, harness, blockingSlug)
+		harness.run(t, "gate", "before-execute", "--task-id", second)
+	}
+
+	t.Run("EXECUTED does not block", func(t *testing.T) {
+		harness := newHarness(t)
+		taskID, key := openFirst(t, harness, "finished-executed")
+		driveToExecuted(t, harness, taskID, key)
+		assertNoConcurrencyNeeded(t, harness, "finished-executed-second")
+	})
+
+	t.Run("REVIEW ready-for-user-decision does not block", func(t *testing.T) {
+		harness := newHarness(t)
+		taskID, key := openFirst(t, harness, "awaiting-decision")
+		driveToExecuted(t, harness, taskID, key)
+		driveToReview(t, harness, taskID, key, "ready-for-user-decision")
+		assertNoConcurrencyNeeded(t, harness, "awaiting-decision-second")
+	})
+
+	t.Run("REVIEW blockers still blocks", func(t *testing.T) {
+		harness := newHarness(t)
+		taskID, key := openFirst(t, harness, "blocked-review")
+		driveToExecuted(t, harness, taskID, key)
+		driveToReview(t, harness, taskID, key, "blockers")
+		second, _ := openFirst(t, harness, "blocked-review-second")
+		if err := harness.fail("gate", "before-execute", "--task-id", second); err == nil {
+			t.Fatal("gate started a second task while another sits at REVIEW with blockers")
+		}
+	})
+
+	t.Run("REVIEW blockers with missing artifact still blocks", func(t *testing.T) {
+		harness := newHarness(t)
+		taskID, key := openFirst(t, harness, "blocked-review-missing")
+		driveToExecuted(t, harness, taskID, key)
+		driveToReview(t, harness, taskID, key, "blockers")
+		reviewPath := ".baton/runs/" + key + "-REVIEW-01.md"
+		if err := os.Remove(harness.app.projectPath(reviewPath)); err != nil {
+			t.Fatal(err)
+		}
+		second, _ := openFirst(t, harness, "blocked-review-missing-second")
+		if err := harness.fail("gate", "before-execute", "--task-id", second); err == nil {
+			t.Fatal("gate started a second task while another's blocked REVIEW artifact is missing from disk")
+		}
+	})
+}

@@ -9,9 +9,18 @@ import (
 
 const concurrencyFile = "CONCURRENCY.md"
 
-// inFlightTasks lists the open tasks that already have a PLAN, which are the
-// ones whose delegates may be editing the checkout.
-func inFlightTasks(records []Record, except string) []string {
+// inFlightTasks lists the open tasks whose delegate may still be editing the
+// checkout. A task last recorded PLANNED or FEEDBACK is in the window between
+// the before-execute gate passing and its EXECUTED event being appended, so it
+// counts. EXECUTED itself does not count: once a RUN is recorded, nobody is
+// editing until the next PLANNED, FEEDBACK, or blocked REVIEW. A task last
+// recorded REVIEW counts unless that REVIEW's own artifact records
+// "Result: ready-for-user-decision" — REVIEW:EXECUTED is a valid transition
+// (see validTransition), so a blocked review is about to be re-executed and is
+// editing, while a review awaiting the user's decision is not. This fails
+// closed: a missing or unreadable REVIEW artifact is treated as blockers, so
+// it still counts as in flight, matching lint's reading of the same sentinel.
+func (a *App) inFlightTasks(records []Record, except string) []string {
 	closed := map[string]bool{}
 	last := map[string]string{}
 	for _, record := range records {
@@ -26,8 +35,12 @@ func inFlightTasks(records []Record, except string) []string {
 			continue
 		}
 		switch event {
-		case eventPlanned, eventExecuted, eventReview, eventFeedback:
+		case eventPlanned, eventFeedback:
 			tasks = append(tasks, taskID)
+		case eventReview:
+			if record, ok := lastRecord(records, taskID, eventReview); ok && a.reviewResult(record.Path) != "ready-for-user-decision" {
+				tasks = append(tasks, taskID)
+			}
 		}
 	}
 	sort.Strings(tasks)
