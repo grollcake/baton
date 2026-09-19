@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
-	"time"
 )
 
 const (
@@ -493,11 +492,6 @@ func (a *App) pendingArtifacts(records []Record, taskID, last string) []string {
 		return nil
 	}
 
-	var feedbackAt time.Time
-	if last == eventFeedback {
-		feedback, _ := lastRecord(records, taskID, eventFeedback)
-		feedbackAt, _ = time.ParseInLocation("2006-01-02T15:04:05", feedback.Timestamp, time.Local)
-	}
 	matches, _ := filepath.Glob(filepath.Join(a.projectPath(".memento/runs"), pattern))
 	var pending []string
 	for _, match := range matches {
@@ -509,11 +503,7 @@ func (a *App) pendingArtifacts(records []Record, taskID, last string) []string {
 			}
 		}
 		if logged {
-			// A current-run FEEDBACK fix rewrites the logged RUN in place.
-			info, statErr := os.Stat(match)
-			if feedbackAt.IsZero() || statErr != nil || !info.ModTime().After(feedbackAt) {
-				continue
-			}
+			continue
 		}
 		if a.CheckArtifact(event, path, taskID) == nil {
 			pending = append(pending, fmt.Sprintf("%s (complete, not appended as %s)", path, event))

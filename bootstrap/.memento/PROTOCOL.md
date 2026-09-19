@@ -60,10 +60,9 @@ Store artifacts in `.memento/runs/` using one stable
 - `.memento/runs/<YYYYMMDD>-<HHMM>-<SLUG>-REVIEW-<NN>.md`
 - `.memento/runs/<YYYYMMDD>-<HHMM>-<SLUG>-CLOSE.md`
 
-`<NN>` starts at `01`. Never overwrite an older round except current-run
-feedback before approval. An artifact is incomplete while any template
-placeholder (`<...>`) remains; a `RUN` is also incomplete while any TODO
-remains. A completed `PLAN`, `RUN`, or `REVIEW` must contain exactly
+`<NN>` starts at `01`. Never overwrite an artifact. An artifact is incomplete
+while any template placeholder (`<...>`) remains; a `RUN` is also incomplete
+while any TODO remains. A completed `PLAN`, `RUN`, or `REVIEW` must contain exactly
 `Status: complete`, and a completed `REVIEW` must set `Result` to
 `ready-for-user-decision` or `blockers`. Each `RUN` records changed files,
 change summary, validation, and unresolved risks. Use the matching template in
@@ -77,9 +76,9 @@ records evidence before fixing and a self smoke test after fixing.
 ## Approval And Feedback
 
 Only explicit user approval can close Standard work. Any user feedback after a
-review is a normal pipeline step, not a reversal of completed work. If feedback
-is an obvious defect, Director routes it to the current run; otherwise Director
-asks whether to continue the current run or start a new run.
+review is a normal pipeline step, not a reversal of completed work. Feedback
+opens the next round `RUN-<NN+1>`; Director never asks the user to choose
+between reusing a round and starting a new one.
 
 ## Prompt And Report Contract
 

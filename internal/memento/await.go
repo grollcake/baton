@@ -14,6 +14,8 @@ const (
 // runAwait blocks until a delegated artifact passes CheckArtifact. Director runs
 // it in the background after delegating so the host wakes Director when the
 // artifact is complete, instead of relying on a delegate's completion notice.
+// Artifacts are never overwritten, so the awaited path cannot already hold a
+// complete artifact from an earlier round.
 func (a *App) runAwait(args []string) error {
 	parsed, err := parseArguments(args, map[string]bool{"--task-id": true, "--timeout": true}, nil)
 	if err != nil {

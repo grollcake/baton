@@ -85,16 +85,16 @@ complete `RUN-<NN>.md`. Each round `<NN>` is one `EXECUTED` followed by matching
 9. After explicit user approval, write `CLOSE`, append `CLOSE`, commit when
    appropriate, and automatically merge any task branch into its base branch.
 10. If the user gives feedback or reports defects instead of approval, append
-    `FEEDBACK`; route obvious defects to the current run, otherwise ask current
-    run vs new run, then resume from Executor.
-11. Repeat `RUN-<NN>` and matching `REVIEW-<NN>` without user approval until
-    `REVIEW-03`; if blockers remain, ask the user to choose retry, plan
-    revision, limited acceptance, or stop.
+    `FEEDBACK`, then resume from Executor in the next round `RUN-<NN+1>`.
+11. Repeat `RUN-<NN>` and matching `REVIEW-<NN>` without user approval for three
+    rounds; if blockers remain, ask the user to choose retry, plan revision,
+    limited acceptance, or stop. `FEEDBACK` is user input, so it restarts that
+    count.
 
 For Standard work, user involvement is required only for final approval,
-pre-approval feedback, current-run vs new-run choice, blockers after
-`REVIEW-03`, or another Director-needed decision. Successful approval
-automatically merges a dedicated task branch without separate confirmation.
+pre-approval feedback, blockers after three rounds, or another Director-needed
+decision. Successful approval automatically merges a dedicated task branch
+without separate confirmation.
 
 ## Director Tools
 
@@ -126,7 +126,26 @@ Do not rely on a delegate's completion notice. Right after each delegation, run
 `<memento> await ...` for the expected artifact as a background command when the
 host supports it (in Claude Code, `run_in_background: true`). It exits 0 once
 the artifact passes `check-artifact`, which wakes Director to append the event;
-a non-zero exit means the timeout (default 30m) passed, so inspect the delegate.
+a non-zero exit means the timeout (default 30m) passed.
+
+A timeout is not by itself a delegate failure. Run `<memento> check-artifact`
+on the awaited path and act on what it reports:
+
+| Artifact | Action |
+| --- | --- |
+| Missing | Answer any returned ambiguity, then re-delegate the same round |
+| `Status: checkpoint` | Delegate still working: await again. Delegate stopped: re-delegate from the checkpoint |
+| Complete and passing | `await` itself died: append the event and continue, do not re-delegate |
+
+Re-delegation keeps the round number. After two timeouts on one round, stop and
+ask the user to choose retry, a longer `--timeout`, manual inspection, or stop.
+Timeouts and re-delegations are not log events; the log records protocol state,
+which a timeout does not change.
+
+A delegate that returns ambiguity instead of writing an artifact produces no
+`await` exit. Treat `await` and the delegate's own notice as alternatives and
+act on whichever arrives first; `await` removes the dependency on the notice,
+it does not forbid using one that arrives.
 
 When an `await` exit arrives while answering the user, finish that reply, then
 append the event, check the gate, and delegate the next stage before any other

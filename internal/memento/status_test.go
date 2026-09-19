@@ -1,11 +1,8 @@
 package memento
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestStatusReportsPendingArtifacts(t *testing.T) {
@@ -52,15 +49,10 @@ func TestStatusReportsPendingArtifacts(t *testing.T) {
 	harness.run(t, "append", eventReview, "--task-id", taskID, "--role", "Planner", "--summary", "Review complete", "--path", reviewPath)
 	expect("logged run after review", "")
 
+	// Feedback opens the next round; the logged RUN-01 stays logged.
 	harness.run(t, "feedback", "--task-id", taskID, "--summary", "Defect found")
-	runFile := filepath.Join(project, filepath.FromSlash(runPath))
-	feedbackAt := harness.app.Now()
-	if err := os.Chtimes(runFile, feedbackAt, feedbackAt.Add(-time.Minute)); err != nil {
-		t.Fatal(err)
-	}
-	expect("stale run after feedback", "")
-	if err := os.Chtimes(runFile, feedbackAt, feedbackAt.Add(time.Minute)); err != nil {
-		t.Fatal(err)
-	}
-	expect("rewritten run after feedback", runPath+" (complete, not appended as EXECUTED)")
+	expect("logged run after feedback", "")
+	nextRunPath := ".memento/runs/" + key + "-RUN-02.md"
+	writeRun(t, project, nextRunPath, taskID, "02")
+	expect("next run after feedback", nextRunPath+" (complete, not appended as EXECUTED)")
 }
