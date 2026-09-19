@@ -165,6 +165,42 @@ func TestLintRejectsCloseAfterBlockers(t *testing.T) {
 	harness.run(t, "lint")
 }
 
+// TestLintRejectsCloseAfterUnreadableReview proves that CLOSE is rejected when
+// the preceding REVIEW's artifact cannot be read from disk, even though the
+// REVIEW was logged with Result: ready-for-user-decision. An unreadable
+// REVIEW must fail closed the same way a REVIEW reporting blockers does; only
+// the missing artifact, not a blockers line, can be producing the rejection
+// here.
+func TestLintRejectsCloseAfterUnreadableReview(t *testing.T) {
+	harness := newHarness(t)
+	key := ".baton/runs/20260711-1002-unreadable"
+	planPath, runPath := key+"-PLAN.md", key+"-RUN-01.md"
+	reviewPath, closePath := key+"-REVIEW-01.md", key+"-CLOSE.md"
+	writePlan(t, harness.app.ProjectDir, planPath, "unrd")
+	writeRun(t, harness.app.ProjectDir, runPath, "unrd", "01")
+	writeReview(t, harness.app.ProjectDir, reviewPath, "unrd", "01", "ready-for-user-decision")
+	writeClose(t, harness.app.ProjectDir, closePath, "unrd")
+	writeLog(t, harness.app.BatonDir,
+		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
+		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
+		"2026-07-11T10:02:00 | unrd | REQUEST  | Director | Unreadable task",
+		"2026-07-11T10:02:01 | unrd | PLANNED  | Planner  | Plan complete | "+planPath,
+		"2026-07-11T10:02:02 | unrd | EXECUTED | Executor | Run complete | "+runPath,
+		"2026-07-11T10:02:03 | unrd | REVIEW   | Planner  | Review complete | "+reviewPath,
+		"2026-07-11T10:02:04 | unrd | CLOSE    | Director | Closed | "+closePath,
+	)
+	if err := os.Remove(harness.app.projectPath(reviewPath)); err != nil {
+		t.Fatal(err)
+	}
+	err := harness.fail("lint")
+	if err == nil {
+		t.Fatal("lint accepted a CLOSE that followed a REVIEW whose artifact could not be read")
+	}
+	if !strings.Contains(harness.err.String(), "CLOSE on line") || !strings.Contains(harness.err.String(), "follows a REVIEW reporting blockers") {
+		t.Fatalf("expected the CLOSE-after-blockers message, got: %s", harness.err.String())
+	}
+}
+
 func TestLintDetectsManagedDocumentDrift(t *testing.T) {
 	harness := newHarness(t)
 	harness.run(t, "lint")

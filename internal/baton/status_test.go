@@ -100,6 +100,9 @@ func TestStatusAfterReviewBlockersOffersNextExecutedRound(t *testing.T) {
 	if !strings.Contains(status, wanted) {
 		t.Fatalf("missing %q in %s", wanted, status)
 	}
+	if strings.Contains(status, "review_artifact:") {
+		t.Fatalf("a readable REVIEW with blockers should not report an unreadable artifact: %s", status)
+	}
 }
 
 func TestStatusAfterReviewReadyOffersUserApproval(t *testing.T) {
@@ -111,6 +114,9 @@ func TestStatusAfterReviewReadyOffersUserApproval(t *testing.T) {
 		if strings.HasPrefix(line, "next_command:") {
 			t.Fatalf("ready REVIEW should not offer a next_command: %s", status)
 		}
+	}
+	if strings.Contains(status, "review_artifact:") {
+		t.Fatalf("a readable, ready REVIEW should not report an unreadable artifact: %s", status)
 	}
 }
 
@@ -138,8 +144,9 @@ func TestStatusAfterMissingReviewArtifactOffersNextExecutedRound(t *testing.T) {
 	// The REVIEW was logged as ready-for-user-decision, but its artifact file
 	// is gone from disk by the time status runs (removed, moved, or never
 	// synced). a.reviewResult(path) then hits its os.ReadFile error branch and
-	// returns "", which must NOT be treated as ready-for-user-decision: status
-	// must still fail closed toward another EXECUTED round.
+	// returns (reviewUnknown, err), which must NOT be treated as
+	// ready-for-user-decision: status must still fail closed toward another
+	// EXECUTED round, and must name the unreadable artifact.
 	taskID, key, status := statusThroughReview(t, "review-missing", "ready-for-user-decision", true)
 	if !strings.Contains(status, "next_gate: EXECUTED (delegate Executor)") {
 		t.Fatalf("missing REVIEW artifact should point at another EXECUTED round: %s", status)
@@ -147,5 +154,16 @@ func TestStatusAfterMissingReviewArtifactOffersNextExecutedRound(t *testing.T) {
 	wanted := "next_command: baton prompt exec --task-id " + taskID + " --key " + key + " --run-number 02"
 	if !strings.Contains(status, wanted) {
 		t.Fatalf("missing %q in %s", wanted, status)
+	}
+	reviewPath := ".baton/runs/" + key + "-REVIEW-01.md"
+	wantedLine := "review_artifact: unreadable: " + reviewPath
+	if !strings.Contains(status, wantedLine) {
+		t.Fatalf("missing %q in %s", wantedLine, status)
+	}
+	branchIndex := strings.Index(status, "branch: ")
+	commandIndex := strings.Index(status, "next_command:")
+	unreadableIndex := strings.Index(status, "review_artifact:")
+	if branchIndex == -1 || commandIndex == -1 || unreadableIndex == -1 || !(branchIndex < unreadableIndex && unreadableIndex < commandIndex) {
+		t.Fatalf("review_artifact line should sit after branch and before next_command: %s", status)
 	}
 }

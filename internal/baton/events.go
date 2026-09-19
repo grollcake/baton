@@ -508,10 +508,22 @@ func (a *App) runStatus(args []string) error {
 		eventFeedback: "EXECUTED (resume Executor work)", eventClose: "closed",
 		eventRunDone: "closed (direct work)",
 	}[last]
-	if last == eventReview && !a.reviewReadyForUser(records, taskID) {
-		next = "EXECUTED (delegate Executor)"
+	var unreadableReviewPath string
+	if last == eventReview {
+		if review, found := lastRecord(records, taskID, eventReview); found {
+			outcome, err := a.reviewResult(review.Path)
+			if outcome != reviewReady {
+				next = "EXECUTED (delegate Executor)"
+			}
+			if err != nil {
+				unreadableReviewPath = review.Path
+			}
+		}
 	}
 	fmt.Fprintf(a.Stdout, "next_gate: %s\nbranch: %s\n", valueOr(next, "unknown"), branch)
+	if unreadableReviewPath != "" {
+		fmt.Fprintf(a.Stdout, "review_artifact: unreadable: %s\n", unreadableReviewPath)
+	}
 	if command := a.nextCommand(records, taskID, last); command != "" {
 		fmt.Fprintf(a.Stdout, "next_command: %s\n", command)
 	}
@@ -571,14 +583,17 @@ func (a *App) reportOpenTasks(records []Record) error {
 
 // reviewReadyForUser reports whether the latest REVIEW logged for a task
 // records Result: ready-for-user-decision. It returns false when no REVIEW is
-// logged or when the artifact cannot be read, so callers fail closed toward
-// another EXECUTED round rather than treating an unreadable REVIEW as ready.
+// logged, when the artifact cannot be read (reviewResult's error makes the
+// outcome reviewUnknown, which is not reviewReady), or when the artifact
+// reads as reviewBlockers, so callers fail closed toward another EXECUTED
+// round rather than treating an unreadable REVIEW as ready.
 func (a *App) reviewReadyForUser(records []Record, taskID string) bool {
 	review, found := lastRecord(records, taskID, eventReview)
 	if !found {
 		return false
 	}
-	return a.reviewResult(review.Path) == "ready-for-user-decision"
+	outcome, err := a.reviewResult(review.Path)
+	return err == nil && outcome == reviewReady
 }
 
 // nextCommand builds the delegation prompt command for the next step, so

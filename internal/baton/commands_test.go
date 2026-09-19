@@ -432,18 +432,21 @@ func TestInFlightNarrowsToPlannedFeedbackAndBlockedReview(t *testing.T) {
 		}
 	})
 
-	t.Run("REVIEW blockers with missing artifact still blocks", func(t *testing.T) {
+	t.Run("REVIEW with unreadable artifact still blocks", func(t *testing.T) {
 		harness := newHarness(t)
 		taskID, key := openFirst(t, harness, "blocked-review-missing")
 		driveToExecuted(t, harness, taskID, key)
-		driveToReview(t, harness, taskID, key, "blockers")
+		// Logged as ready-for-user-decision, not blockers: only the artifact's
+		// absence (the unreadable branch), not a blockers line, can be
+		// producing the block below.
+		driveToReview(t, harness, taskID, key, "ready-for-user-decision")
 		reviewPath := ".baton/runs/" + key + "-REVIEW-01.md"
 		if err := os.Remove(harness.app.projectPath(reviewPath)); err != nil {
 			t.Fatal(err)
 		}
 		second, _ := openFirst(t, harness, "blocked-review-missing-second")
 		if err := harness.fail("gate", "before-execute", "--task-id", second); err == nil {
-			t.Fatal("gate started a second task while another's blocked REVIEW artifact is missing from disk")
+			t.Fatal("gate started a second task while another's REVIEW artifact is unreadable from disk")
 		}
 	})
 }
