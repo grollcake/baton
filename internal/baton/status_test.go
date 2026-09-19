@@ -100,7 +100,7 @@ func TestStatusAfterReviewBlockersOffersNextExecutedRound(t *testing.T) {
 	if !strings.Contains(status, wanted) {
 		t.Fatalf("missing %q in %s", wanted, status)
 	}
-	if strings.Contains(status, "review_artifact:") {
+	if strings.Contains(status, "review_artifact_unreadable:") {
 		t.Fatalf("a readable REVIEW with blockers should not report an unreadable artifact: %s", status)
 	}
 }
@@ -115,7 +115,7 @@ func TestStatusAfterReviewReadyOffersUserApproval(t *testing.T) {
 			t.Fatalf("ready REVIEW should not offer a next_command: %s", status)
 		}
 	}
-	if strings.Contains(status, "review_artifact:") {
+	if strings.Contains(status, "review_artifact_unreadable:") {
 		t.Fatalf("a readable, ready REVIEW should not report an unreadable artifact: %s", status)
 	}
 }
@@ -156,14 +156,14 @@ func TestStatusAfterMissingReviewArtifactOffersNextExecutedRound(t *testing.T) {
 		t.Fatalf("missing %q in %s", wanted, status)
 	}
 	reviewPath := ".baton/runs/" + key + "-REVIEW-01.md"
-	wantedLine := "review_artifact: unreadable: " + reviewPath
+	wantedLine := "review_artifact_unreadable: " + reviewPath
 	if !strings.Contains(status, wantedLine) {
 		t.Fatalf("missing %q in %s", wantedLine, status)
 	}
 	branchIndex := strings.Index(status, "branch: ")
 	commandIndex := strings.Index(status, "next_command:")
-	unreadableIndex := strings.Index(status, "review_artifact:")
+	unreadableIndex := strings.Index(status, "review_artifact_unreadable:")
 	if branchIndex == -1 || commandIndex == -1 || unreadableIndex == -1 || !(branchIndex < unreadableIndex && unreadableIndex < commandIndex) {
-		t.Fatalf("review_artifact line should sit after branch and before next_command: %s", status)
+		t.Fatalf("review_artifact_unreadable line should sit after branch and before next_command: %s", status)
 	}
 }

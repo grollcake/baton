@@ -94,8 +94,8 @@ func validateArtifactPath(event, path string) error {
 // the PLAN artifact the task will produce. It checks shape only, because the
 // file does not exist when new-round records it.
 func validateRequestPath(path string) error {
-	if validateArtifactPath(eventPlanned, path) != nil {
-		return fmt.Errorf("artifact-check: REQUEST path must be a PLAN artifact path under .baton/runs/: %s", path)
+	if err := validateArtifactPath(eventPlanned, path); err != nil {
+		return fmt.Errorf("artifact-check: REQUEST path must be a PLAN artifact path: %w", err)
 	}
 	return nil
 }

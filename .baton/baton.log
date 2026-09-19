@@ -34,3 +34,8 @@
 2026-09-19T19:36:53 | obbv | EXECUTED | Executor | Type the review outcome so unknown cannot pass as an answer | .baton/runs/20260919-1927-review-result-error-RUN-01.md
 2026-09-19T19:40:37 | obbv | REVIEW   | Planner  | Review round 01 | .baton/runs/20260919-1927-review-result-error-REVIEW-01.md
 2026-09-19T20:49:25 | obbv | CLOSE    | Director | Type the review outcome so an unreadable review cannot pass as an answer | .baton/runs/20260919-1927-review-result-error-CLOSE.md
+2026-09-19T20:50:23 | kdfa | REQUEST  | Director | Clear the nits recorded across six closed tasks | .baton/runs/20260919-2050-nit-cleanup-PLAN.md
+2026-09-19T20:54:13 | kdfa | PLANNED  | Planner  | Clear the nits recorded across six closed tasks | .baton/runs/20260919-2050-nit-cleanup-PLAN.md
+2026-09-19T21:03:24 | kdfa | EXECUTED | Executor | Clear six nits, leave three declined | .baton/runs/20260919-2050-nit-cleanup-RUN-01.md
+2026-09-19T21:08:11 | kdfa | REVIEW   | Planner  | Review round 01 | .baton/runs/20260919-2050-nit-cleanup-REVIEW-01.md
+2026-09-19T21:22:43 | kdfa | CLOSE    | Director | Clear six recorded nits and decline three on the record | .baton/runs/20260919-2050-nit-cleanup-CLOSE.md

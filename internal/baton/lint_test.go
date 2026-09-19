@@ -63,6 +63,82 @@ func TestLintRejectsMissingPlannedArtifact(t *testing.T) {
 	}
 }
 
+// TestLintRejectsInvalidExecutedArtifact pins lint's EXECUTED arm of
+// requiresArtifact: an EXECUTED artifact that exists on disk but fails
+// checkArtifact (here, a missing Status: complete) must still be rejected,
+// not merely checked for presence.
+func TestLintRejectsInvalidExecutedArtifact(t *testing.T) {
+	harness := newHarness(t)
+	planPath := ".baton/runs/20260919-2100-badrun-PLAN.md"
+	runPath := ".baton/runs/20260919-2100-badrun-RUN-01.md"
+	writePlan(t, harness.app.ProjectDir, planPath, "brun")
+	invalid := strings.Replace(validRun("brun", "01"), "Status: complete", "Status: checkpoint", 1)
+	writeArtifact(t, harness.app.ProjectDir, runPath, invalid)
+	writeLog(t, harness.app.BatonDir,
+		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
+		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
+		"2026-09-19T21:00:00 | brun | REQUEST  | Director | Bad run",
+		"2026-09-19T21:00:01 | brun | PLANNED  | Planner  | Plan complete | "+planPath,
+		"2026-09-19T21:00:02 | brun | EXECUTED | Executor | Run complete | "+runPath,
+	)
+	if err := harness.fail("lint"); err == nil {
+		t.Fatal("lint accepted an EXECUTED artifact that fails checkArtifact")
+	}
+}
+
+// TestLintRejectsInvalidReviewArtifact pins lint's REVIEW arm of
+// requiresArtifact: a REVIEW artifact that exists on disk but fails
+// checkArtifact (here, an invalid Result value) must still be rejected.
+func TestLintRejectsInvalidReviewArtifact(t *testing.T) {
+	harness := newHarness(t)
+	planPath := ".baton/runs/20260919-2100-badreview-PLAN.md"
+	runPath := ".baton/runs/20260919-2100-badreview-RUN-01.md"
+	reviewPath := ".baton/runs/20260919-2100-badreview-REVIEW-01.md"
+	writePlan(t, harness.app.ProjectDir, planPath, "brev")
+	writeRun(t, harness.app.ProjectDir, runPath, "brev", "01")
+	invalid := strings.Replace(validReview("brev", "01"), "ready-for-user-decision", "unknown", 1)
+	writeArtifact(t, harness.app.ProjectDir, reviewPath, invalid)
+	writeLog(t, harness.app.BatonDir,
+		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
+		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
+		"2026-09-19T21:00:00 | brev | REQUEST  | Director | Bad review",
+		"2026-09-19T21:00:01 | brev | PLANNED  | Planner  | Plan complete | "+planPath,
+		"2026-09-19T21:00:02 | brev | EXECUTED | Executor | Run complete | "+runPath,
+		"2026-09-19T21:00:03 | brev | REVIEW   | Planner  | Review complete | "+reviewPath,
+	)
+	if err := harness.fail("lint"); err == nil {
+		t.Fatal("lint accepted a REVIEW artifact that fails checkArtifact")
+	}
+}
+
+// TestLintRejectsInvalidCloseArtifact pins lint's CLOSE arm of
+// requiresArtifact: a CLOSE artifact that exists on disk but fails
+// checkArtifact (here, a missing user approval line) must still be rejected.
+func TestLintRejectsInvalidCloseArtifact(t *testing.T) {
+	harness := newHarness(t)
+	planPath := ".baton/runs/20260919-2100-badclose-PLAN.md"
+	runPath := ".baton/runs/20260919-2100-badclose-RUN-01.md"
+	reviewPath := ".baton/runs/20260919-2100-badclose-REVIEW-01.md"
+	closePath := ".baton/runs/20260919-2100-badclose-CLOSE.md"
+	writePlan(t, harness.app.ProjectDir, planPath, "bcls")
+	writeRun(t, harness.app.ProjectDir, runPath, "bcls", "01")
+	writeReview(t, harness.app.ProjectDir, reviewPath, "bcls", "01", "ready-for-user-decision")
+	invalid := strings.Replace(validClose("bcls"), "Approved By: User\n", "", 1)
+	writeArtifact(t, harness.app.ProjectDir, closePath, invalid)
+	writeLog(t, harness.app.BatonDir,
+		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
+		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
+		"2026-09-19T21:00:00 | bcls | REQUEST  | Director | Bad close",
+		"2026-09-19T21:00:01 | bcls | PLANNED  | Planner  | Plan complete | "+planPath,
+		"2026-09-19T21:00:02 | bcls | EXECUTED | Executor | Run complete | "+runPath,
+		"2026-09-19T21:00:03 | bcls | REVIEW   | Planner  | Review complete | "+reviewPath,
+		"2026-09-19T21:00:04 | bcls | CLOSE    | Director | Closed | "+closePath,
+	)
+	if err := harness.fail("lint"); err == nil {
+		t.Fatal("lint accepted a CLOSE artifact that fails checkArtifact")
+	}
+}
+
 func TestLintRejectsMissingFeedbackOrRunDonePath(t *testing.T) {
 	harness := newHarness(t)
 	missingRun := ".baton/runs/20260711-1001-missing-RUN-01.md"
