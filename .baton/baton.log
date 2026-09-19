@@ -7,3 +7,5 @@
 2026-09-19T17:17:12 | uonl | EXECUTED | Executor | Fail closed on unreadable REVIEW artifact | .baton/runs/20260919-1700-concurrency-inflight-RUN-02.md
 2026-09-19T17:19:44 | uonl | REVIEW   | Planner  | Review round 02 | .baton/runs/20260919-1700-concurrency-inflight-REVIEW-02.md
 2026-09-19T17:26:16 | uonl | CLOSE    | Director | Narrow in-flight detection, failing closed on unreadable reviews | .baton/runs/20260919-1700-concurrency-inflight-CLOSE.md
+2026-09-19T17:29:38 | veee | REQUEST  | Director | Refresh the installed .baton/bin after build-release
+2026-09-19T17:30:20 | veee | RUN_DONE | Director | build-release refreshes the installed .baton/bin

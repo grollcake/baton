@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 )
@@ -66,9 +67,44 @@ func main() {
 		fmt.Printf("built %s\n", filepath.ToSlash(relative))
 	}
 	sort.Strings(checksums)
-	if err := os.WriteFile(filepath.Join(binRoot, "SHA256SUMS"), []byte(strings.Join(checksums, "\n")+"\n"), 0o644); err != nil {
+	sums := filepath.Join(binRoot, "SHA256SUMS")
+	if err := os.WriteFile(sums, []byte(strings.Join(checksums, "\n")+"\n"), 0o644); err != nil {
 		fatal(err)
 	}
+	refreshInstall(root, binRoot, sums)
+}
+
+// refreshInstall updates this repository's own .baton/bin when one is present.
+// Baton is installed here, and .baton/bin is not committed, so a build that
+// only wrote bootstrap/.baton/bin would leave the installed binary behind its
+// checksums and `baton lint` would fail until someone copied it by hand.
+func refreshInstall(root, binRoot, sums string) {
+	installed := filepath.Join(root, ".baton", "bin")
+	if info, err := os.Stat(installed); err != nil || !info.IsDir() {
+		return
+	}
+	name := "baton"
+	if runtime.GOOS == "windows" {
+		name += ".exe"
+	}
+	source := filepath.Join(binRoot, runtime.GOOS+"-"+runtime.GOARCH, name)
+	for _, pair := range [][2]string{
+		{source, filepath.Join(installed, name)},
+		{sums, filepath.Join(installed, "SHA256SUMS")},
+	} {
+		content, err := os.ReadFile(pair[0])
+		if err != nil {
+			fatal(fmt.Errorf("refresh %s: %w", pair[1], err))
+		}
+		mode := os.FileMode(0o644)
+		if pair[0] == source {
+			mode = 0o755
+		}
+		if err := os.WriteFile(pair[1], content, mode); err != nil {
+			fatal(fmt.Errorf("refresh %s: %w", pair[1], err))
+		}
+	}
+	fmt.Printf("refreshed .baton/bin/%s\n", name)
 }
 
 func fatal(err error) {

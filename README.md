@@ -151,10 +151,14 @@ baton models set <codex|claude-code> --director <model> --planner <model> --exec
 클론한 뒤 `.baton/bin/baton lint`를 쓰려면 자기 플랫폼 바이너리를 먼저 놓는다.
 
 ```text
+mkdir -p .baton/bin
 cp bootstrap/.baton/bin/<os>-<arch>/baton .baton/bin/baton
 cp bootstrap/.baton/bin/SHA256SUMS .baton/bin/SHA256SUMS
 chmod +x .baton/bin/baton
 ```
+
+이후에는 `build-release`가 `.baton/bin/`이 있을 때 현재 플랫폼 바이너리와
+체크섬을 함께 갱신하므로, 빌드한 뒤 `lint`가 깨지지 않는다.
 
 ## 운영 원칙
 
