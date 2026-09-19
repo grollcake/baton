@@ -29,3 +29,8 @@
 2026-09-19T19:09:26 | wqkb | EXECUTED | Executor | Check placeholders by template provenance | .baton/runs/20260919-1902-placeholder-check-RUN-01.md
 2026-09-19T19:14:16 | wqkb | REVIEW   | Planner  | Review round 01 | .baton/runs/20260919-1902-placeholder-check-REVIEW-01.md
 2026-09-19T19:25:24 | wqkb | CLOSE    | Director | Judge placeholders by template provenance, and have delegates self-check | .baton/runs/20260919-1902-placeholder-check-CLOSE.md
+2026-09-19T19:27:16 | obbv | REQUEST  | Director | Make an unreadable review a state callers must handle | .baton/runs/20260919-1927-review-result-error-PLAN.md
+2026-09-19T19:30:46 | obbv | PLANNED  | Planner  | Make an unreadable review a state callers must handle | .baton/runs/20260919-1927-review-result-error-PLAN.md
+2026-09-19T19:36:53 | obbv | EXECUTED | Executor | Type the review outcome so unknown cannot pass as an answer | .baton/runs/20260919-1927-review-result-error-RUN-01.md
+2026-09-19T19:40:37 | obbv | REVIEW   | Planner  | Review round 01 | .baton/runs/20260919-1927-review-result-error-REVIEW-01.md
+2026-09-19T20:49:25 | obbv | CLOSE    | Director | Type the review outcome so an unreadable review cannot pass as an answer | .baton/runs/20260919-1927-review-result-error-CLOSE.md

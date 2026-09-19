@@ -109,7 +109,7 @@ func (state *lintState) checkLog() {
 	taskKeys := map[string]string{}
 	pendingRounds := map[string]string{}
 	pendingKeys := map[string]string{}
-	reviewResults := map[string]string{}
+	reviewResults := map[string]reviewOutcome{}
 	legacyLines := 0
 
 	scanner := bufio.NewScanner(file)
@@ -210,12 +210,18 @@ func (state *lintState) checkLog() {
 				delete(pendingRounds, record.TaskID)
 				delete(pendingKeys, record.TaskID)
 			}
-			reviewResults[record.TaskID] = state.app.reviewResult(record.Path)
+			// The error is discarded here, not ignored: an unreadable artifact
+			// already produced a lint error above through checkArtifact on
+			// this same log line, and reviewUnknown (the zero value) still
+			// compares unequal to reviewReady below, so the CLOSE guard fails
+			// closed regardless.
+			outcome, _ := state.app.reviewResult(record.Path)
+			reviewResults[record.TaskID] = outcome
 		case eventClose:
 			if record.Path != "" && artifactKey(record.Path, record.Event) != taskKeys[record.TaskID] {
 				state.err("CLOSE artifact key does not match PLAN on line %d for task-id %s", lineNumber, record.TaskID)
 			}
-			if result, found := reviewResults[record.TaskID]; found && result != "ready-for-user-decision" {
+			if result, found := reviewResults[record.TaskID]; found && result != reviewReady {
 				state.err("CLOSE on line %d follows a REVIEW reporting blockers for task-id %s", lineNumber, record.TaskID)
 			}
 		}
@@ -236,17 +242,34 @@ func (state *lintState) checkLog() {
 	state.ok("Baton tasks: %d total, %d closed, %d open", len(lastEvents), closedCount, len(lastEvents)-closedCount)
 }
 
-// reviewResult reports the Result a REVIEW artifact records, so lint can detect
-// a CLOSE that followed a review with blockers.
-func (a *App) reviewResult(path string) string {
+// reviewOutcome is the safety-relevant reading of a REVIEW artifact's
+// Result line. reviewUnknown is the zero value on purpose: it equals neither
+// reviewReady nor reviewBlockers, so a call site that discards the error
+// (result, _ := a.reviewResult(path)) still lands on the same value an
+// unreadable artifact produces, and a comparison against either named
+// outcome still fails closed instead of silently reading as ready.
+type reviewOutcome int
+
+const (
+	reviewUnknown reviewOutcome = iota
+	reviewReady
+	reviewBlockers
+)
+
+// reviewResult reports the Result a REVIEW artifact records, so callers can
+// detect a review with blockers. It returns (reviewUnknown, err) when the
+// artifact cannot be read, so the read failure is carried by both a distinct
+// zero-value outcome and a returned error, not by a value that could be
+// mistaken for a normal answer.
+func (a *App) reviewResult(path string) (reviewOutcome, error) {
 	content, err := os.ReadFile(a.projectPath(path))
 	if err != nil {
-		return ""
+		return reviewUnknown, err
 	}
 	if hasExactLine(string(content), "Result: ready-for-user-decision") {
-		return "ready-for-user-decision"
+		return reviewReady, nil
 	}
-	return "blockers"
+	return reviewBlockers, nil
 }
 
 func (a *App) Lint() error {

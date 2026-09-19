@@ -18,8 +18,9 @@ const concurrencyFile = "CONCURRENCY.md"
 // "Result: ready-for-user-decision" — REVIEW:EXECUTED is a valid transition
 // (see validTransition), so a blocked review is about to be re-executed and is
 // editing, while a review awaiting the user's decision is not. This fails
-// closed: a missing or unreadable REVIEW artifact is treated as blockers, so
-// it still counts as in flight, matching lint's reading of the same sentinel.
+// closed: a missing or unreadable REVIEW artifact reads as reviewUnknown,
+// which is not reviewReady, so it still counts as in flight, matching lint's
+// reading of the same outcome.
 func (a *App) inFlightTasks(records []Record, except string) []string {
 	closed := map[string]bool{}
 	last := map[string]string{}
@@ -38,8 +39,14 @@ func (a *App) inFlightTasks(records []Record, except string) []string {
 		case eventPlanned, eventFeedback:
 			tasks = append(tasks, taskID)
 		case eventReview:
-			if record, ok := lastRecord(records, taskID, eventReview); ok && a.reviewResult(record.Path) != "ready-for-user-decision" {
-				tasks = append(tasks, taskID)
+			if record, ok := lastRecord(records, taskID, eventReview); ok {
+				// Error discarded deliberately: reviewUnknown, the zero value
+				// on read failure, is not reviewReady, so the task still
+				// counts as in flight either way.
+				outcome, _ := a.reviewResult(record.Path)
+				if outcome != reviewReady {
+					tasks = append(tasks, taskID)
+				}
 			}
 		}
 	}
