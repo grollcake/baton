@@ -153,7 +153,19 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacy bool
 			{`^## Acceptance[[:space:]]*$`, "must include Acceptance"},
 			{`^## Validation Summary[[:space:]]*$`, "must include Validation Summary"},
 		}
-		return checkArtifactLines(content, checks, event, path)
+		if !allowLegacy {
+			checks = append(checks, [2]string{`^## Plan Deviations[[:space:]]*$`, "must include Plan Deviations"})
+		}
+		if err := checkArtifactLines(content, checks, event, path); err != nil {
+			return err
+		}
+		if allowLegacy {
+			return nil
+		}
+		if countSectionItems(content, "## Plan Deviations") < 1 {
+			return fmt.Errorf("artifact-check: %s artifact must list at least one Plan Deviations item: %s", event, path)
+		}
+		return nil
 	}
 	return nil
 }

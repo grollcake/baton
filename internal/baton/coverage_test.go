@@ -159,6 +159,19 @@ Result: ready-for-user-decision
 `
 }
 
+func validClose(taskID string) string {
+	return `# CLOSE: Test
+Task ID: ` + taskID + `
+Date: 2026-07-11
+Director: test
+Approved By: User
+## Acceptance
+## Validation Summary
+## Plan Deviations
+- none.
+`
+}
+
 func TestStatusPromptAndGateBranches(t *testing.T) {
 	harness := newHarness(t)
 	status := harness.run(t, "status")
@@ -259,6 +272,18 @@ func TestArtifactRequiresProtocolSections(t *testing.T) {
 	}
 	writeArtifact(t, harness.app.ProjectDir, reviewPath, validReview("sect", "01"))
 	harness.run(t, "check-artifact", eventReview, reviewPath, "sect")
+
+	closePath := ".baton/runs/20260711-1001-sections-CLOSE.md"
+	writeArtifact(t, harness.app.ProjectDir, closePath, strings.Replace(validClose("sect"), "## Plan Deviations\n", "", 1))
+	if err := harness.fail("check-artifact", eventClose, closePath, "sect"); err == nil {
+		t.Fatal("check-artifact accepted a CLOSE without ## Plan Deviations")
+	}
+	writeArtifact(t, harness.app.ProjectDir, closePath, strings.Replace(validClose("sect"), "- none.\n", "", 1))
+	if err := harness.fail("check-artifact", eventClose, closePath, "sect"); err == nil {
+		t.Fatal("check-artifact accepted a CLOSE with an empty Plan Deviations section")
+	}
+	writeArtifact(t, harness.app.ProjectDir, closePath, validClose("sect"))
+	harness.run(t, "check-artifact", eventClose, closePath, "sect")
 }
 
 func TestStatusListsOpenTasks(t *testing.T) {
