@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 )
 
@@ -484,10 +485,41 @@ func (a *App) runStatus(args []string) error {
 		eventRunDone: "closed (direct work)",
 	}[last]
 	fmt.Fprintf(a.Stdout, "next_gate: %s\nbranch: %s\n", valueOr(next, "unknown"), branch)
+	if command := a.nextCommand(records, taskID, last); command != "" {
+		fmt.Fprintf(a.Stdout, "next_command: %s\n", command)
+	}
 	for _, pending := range a.pendingArtifacts(records, taskID, last) {
 		fmt.Fprintf(a.Stdout, "pending_artifact: %s\n", pending)
 	}
 	return nil
+}
+
+// nextCommand builds the delegation prompt command for the next step, so
+// Director runs it instead of recovering the round key from artifact names. It
+// stays empty before PLANNED, where new-round already printed the key, and at
+// REVIEW, where the next step depends on the user's decision.
+func (a *App) nextCommand(records []Record, taskID, last string) string {
+	planned, found := lastRecord(records, taskID, eventPlanned)
+	if !found {
+		return ""
+	}
+	key := filepath.Base(artifactKey(planned.Path, eventPlanned))
+	executed, hasRun := lastRecord(records, taskID, eventExecuted)
+	switch last {
+	case eventPlanned, eventFeedback:
+		round := 1
+		if hasRun {
+			number, err := strconv.Atoi(artifactRound(executed.Path, eventExecuted))
+			if err != nil {
+				return ""
+			}
+			round = number + 1
+		}
+		return fmt.Sprintf("baton prompt exec --task-id %s --key %s --run-number %02d", taskID, key, round)
+	case eventExecuted:
+		return fmt.Sprintf("baton prompt review --task-id %s --key %s --run-number %s", taskID, key, artifactRound(executed.Path, eventExecuted))
+	}
+	return ""
 }
 
 // pendingArtifacts lists complete artifacts that the log does not record yet,

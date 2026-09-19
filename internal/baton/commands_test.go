@@ -91,6 +91,9 @@ func TestTransitionMatrixAndAllowedFlows(t *testing.T) {
 	if !strings.Contains(status, "last_event: REVIEW") {
 		t.Fatalf("unexpected status: %s", status)
 	}
+	if strings.Contains(status, "next_command:") {
+		t.Fatalf("status offered a next command while awaiting the user decision: %s", status)
+	}
 	closePath := ".baton/runs/" + key + "-CLOSE.md"
 	writeClose(t, harness.app.ProjectDir, closePath, taskID)
 	harness.run(t, "append", eventClose, "--task-id", taskID, "--role", "Director", "--summary", "Retry flow closed", "--path", closePath)

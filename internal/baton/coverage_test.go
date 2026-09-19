@@ -192,3 +192,36 @@ func TestStatusPromptAndGateBranches(t *testing.T) {
 		t.Fatal("prompt accepted a missing key")
 	}
 }
+
+func TestStatusNextCommand(t *testing.T) {
+	harness := newHarness(t)
+	taskID, key := parseRoundOutput(t, harness.run(t, "new-round", "next-command", "--summary", "Next command flow"))
+	if strings.Contains(harness.run(t, "status", "--task-id", taskID), "next_command:") {
+		t.Fatal("status offered a next command before PLANNED")
+	}
+
+	planPath := ".baton/runs/" + key + "-PLAN.md"
+	writePlan(t, harness.app.ProjectDir, planPath, taskID)
+	harness.run(t, "append", eventPlanned, "--task-id", taskID, "--role", "Planner", "--summary", "Plan complete", "--path", planPath)
+	wanted := "next_command: baton prompt exec --task-id " + taskID + " --key " + key + " --run-number 01"
+	if status := harness.run(t, "status", "--task-id", taskID); !strings.Contains(status, wanted) {
+		t.Fatalf("missing %q in %s", wanted, status)
+	}
+
+	runPath := ".baton/runs/" + key + "-RUN-01.md"
+	writeRun(t, harness.app.ProjectDir, runPath, taskID, "01")
+	harness.run(t, "append", eventExecuted, "--task-id", taskID, "--role", "Executor", "--summary", "Run complete", "--path", runPath)
+	wanted = "next_command: baton prompt review --task-id " + taskID + " --key " + key + " --run-number 01"
+	if status := harness.run(t, "status", "--task-id", taskID); !strings.Contains(status, wanted) {
+		t.Fatalf("missing %q in %s", wanted, status)
+	}
+
+	reviewPath := ".baton/runs/" + key + "-REVIEW-01.md"
+	writeReview(t, harness.app.ProjectDir, reviewPath, taskID, "01", "blockers")
+	harness.run(t, "append", eventReview, "--task-id", taskID, "--role", "Planner", "--summary", "Review complete", "--path", reviewPath)
+	harness.run(t, "feedback", "--task-id", taskID, "--summary", "User feedback")
+	wanted = "next_command: baton prompt exec --task-id " + taskID + " --key " + key + " --run-number 02"
+	if status := harness.run(t, "status", "--task-id", taskID); !strings.Contains(status, wanted) {
+		t.Fatalf("missing %q in %s", wanted, status)
+	}
+}
