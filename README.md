@@ -50,6 +50,14 @@ Go 런타임이나 특정 셸이 필요하지 않다. Windows에서는 PowerShel
 Bash에서 실행할 수 있다. Git 연동 기능을 사용하려면 `git`이 `PATH`에 있어야
 한다. 소스 빌드와 테스트에는 Go 1.26 이상이 필요하다.
 
+### 일시 중지와 재개
+
+`baton pause`는 프로젝트에서 Baton을 잠시 세워 두고, `baton resume`은 다시
+켠다. 두 명령은 `AGENTS.md`/`CLAUDE.md`의 `<baton-rules>` 블록만 바꾸며,
+`.baton/`에 쌓인 기록은 그대로 둔다. 열린 작업이 있으면 `pause`는 기본적으로
+거부하고, 강제로 진행하려면 `--force`를 준다. 일시 중지 중에는 `update`와
+`merge-agent-block`이 거부되므로, 업데이트가 필요하면 먼저 `resume`한다.
+
 ## 작업 흐름
 
 Baton 세션을 시작할 때마다 Director는 Codex 또는 Claude Code를 감지하고

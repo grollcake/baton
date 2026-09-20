@@ -93,7 +93,11 @@ func (a *App) runUpdate(args []string) error {
 	nextVersion := strings.TrimSpace(string(nextVersionBytes))
 	fmt.Fprintf(a.Stdout, "Baton update: %s -> %s\n", currentVersion, nextVersion)
 
+	pausedMessage := a.pausedUpdateMessage()
 	if !parsed.flags["--apply"] {
+		if pausedMessage != "" {
+			fmt.Fprintln(a.Stdout, pausedMessage)
+		}
 		fmt.Fprint(a.Stdout, `Dry run. Re-run with --apply to update:
 - WARNING: --apply replaces the managed files below; review local customizations first.
 - AGENTS.md Baton block
@@ -115,6 +119,9 @@ Preserved:
 - .baton/runs/
 `)
 		return nil
+	}
+	if pausedMessage != "" {
+		return errors.New(pausedMessage)
 	}
 	if err := a.preflightUpdate(upstream); err != nil {
 		return err

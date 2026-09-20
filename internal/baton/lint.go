@@ -61,24 +61,58 @@ func (state *lintState) requireTimeline() {
 
 var batonBlockPattern = regexp.MustCompile(`(?s)<baton-rules>.*?</baton-rules>`)
 
+// checkAgentBlocks classifies whichever of AGENTS.md and CLAUDE.md are
+// present against the active and paused block text this binary ships
+// (Decision 6). It requires equality only between files that exist (gap A:
+// a Claude-only project is fully checked, not silently skipped) and treats
+// two present blocks that are identically anything-other-than-shipped-text,
+// including identically emptied, as an error rather than a pass (gap B).
 func (state *lintState) checkAgentBlocks() {
 	agentsPath := filepath.Join(state.app.ProjectDir, "AGENTS.md")
 	claudePath := filepath.Join(state.app.ProjectDir, "CLAUDE.md")
 	agents, agentsErr := os.ReadFile(agentsPath)
 	claude, claudeErr := os.ReadFile(claudePath)
-	if agentsErr != nil || claudeErr != nil {
+	haveAgents := agentsErr == nil
+	haveClaude := claudeErr == nil
+	if !haveAgents && !haveClaude {
 		return
 	}
-	agentsBlock := batonBlockPattern.Find(agents)
-	claudeBlock := batonBlockPattern.Find(claude)
-	if len(agentsBlock) == 0 {
-		state.err("AGENTS.md missing <baton-rules> block")
-	} else if len(claudeBlock) == 0 {
-		state.err("CLAUDE.md missing <baton-rules> block")
-	} else if string(agentsBlock) != string(claudeBlock) {
+
+	var agentsBlock, claudeBlock []byte
+	if haveAgents {
+		agentsBlock = batonBlockPattern.Find(agents)
+		if len(agentsBlock) == 0 {
+			state.err("AGENTS.md missing <baton-rules> block")
+			return
+		}
+	}
+	if haveClaude {
+		claudeBlock = batonBlockPattern.Find(claude)
+		if len(claudeBlock) == 0 {
+			state.err("CLAUDE.md missing <baton-rules> block")
+			return
+		}
+	}
+	if haveAgents && haveClaude && !bytes.Equal(agentsBlock, claudeBlock) {
 		state.err("AGENTS.md and CLAUDE.md Baton blocks differ")
-	} else {
-		state.ok("AGENTS.md and CLAUDE.md Baton blocks match")
+		return
+	}
+	block := agentsBlock
+	if !haveAgents {
+		block = claudeBlock
+	}
+	status, err := classifyBlock(block)
+	if err != nil {
+		state.err("%s", err)
+		return
+	}
+	switch status {
+	case blockActive:
+		state.ok("AGENTS.md and CLAUDE.md Baton blocks match (active)")
+	case blockPaused:
+		state.ok("Baton is paused; records under .baton/ are unchanged by a pause")
+	default:
+		state.err("Baton block matches neither the active nor the paused block this binary ships; run an update or restore it")
 	}
 }
 

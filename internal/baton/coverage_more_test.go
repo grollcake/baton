@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	docs "github.com/grollcake/baton"
 )
 
 func TestNewRoundCollisionBranchAndRandomErrors(t *testing.T) {
@@ -85,14 +87,21 @@ func (zeroReader) Read(target []byte) (int, error) {
 }
 
 func TestAgentBlockLintBranches(t *testing.T) {
+	active, err := docs.ActiveBlock()
+	if err != nil {
+		t.Fatal(err)
+	}
+	neither := "<baton-rules>\nneither active nor paused\n</baton-rules>"
 	cases := []struct {
 		name, agents, claude string
 		wantErrors           int
 	}{
-		{"matching", "<baton-rules>same</baton-rules>", "<baton-rules>same</baton-rules>", 0},
-		{"agents missing", "plain", "<baton-rules>same</baton-rules>", 1},
-		{"claude missing", "<baton-rules>same</baton-rules>", "plain", 1},
-		{"different", "<baton-rules>one</baton-rules>", "<baton-rules>two</baton-rules>", 1},
+		{"matching active", string(active), string(active), 0},
+		{"matching paused", pausedBlock, pausedBlock, 0},
+		{"agents missing", "plain", string(active), 1},
+		{"claude missing", string(active), "plain", 1},
+		{"different", string(active), pausedBlock, 1},
+		{"matches neither", neither, neither, 1},
 	}
 	for _, testCase := range cases {
 		t.Run(testCase.name, func(t *testing.T) {
