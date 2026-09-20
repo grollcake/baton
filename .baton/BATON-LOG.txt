@@ -82,3 +82,10 @@
 2026-09-20T18:56:53 | ttuw | RUN_DONE | Director | Guide covers pause, remove, and the class names
 2026-09-20T18:57:19 | dqci | REQUEST  | Director | Say what purge deletes and stop a message reaching a project that never had Baton
 2026-09-20T18:58:50 | dqci | RUN_DONE | Director | Messages state only what the tool can know
+2026-09-20T19:00:22 | cqso | REQUEST  | Director | Give delegates the fixture and mutation checks the protocol asks of them | .baton/runs/20260920-1900-verify-tooling-PLAN.md
+2026-09-20T19:07:31 | cqso | PLANNED  | Planner  | Give delegates the fixture and mutation checks | .baton/runs/20260920-1900-verify-tooling-PLAN.md
+2026-09-20T19:17:56 | cqso | EXECUTED | Executor | Add revert-check and a repository-only fixture maker | .baton/runs/20260920-1900-verify-tooling-RUN-01.md
+2026-09-20T19:23:46 | cqso | REVIEW   | Planner  | Review round 01 | .baton/runs/20260920-1900-verify-tooling-REVIEW-01.md
+2026-09-20T19:28:46 | cqso | EXECUTED | Executor | Always answer, carry the example, drop the shell assumption | .baton/runs/20260920-1900-verify-tooling-RUN-02.md
+2026-09-20T19:33:44 | cqso | REVIEW   | Planner  | Review round 02 | .baton/runs/20260920-1900-verify-tooling-REVIEW-02.md
+2026-09-20T19:34:33 | cqso | CLOSE    | Director | Add revert-check and a repository-only fixture maker | .baton/runs/20260920-1900-verify-tooling-CLOSE.md
