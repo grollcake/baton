@@ -27,7 +27,7 @@ var (
 // removed is true only when lint's checkLog is checking a removed project's
 // history (Decision 6): remove deletes .baton/templates/ along with the rest
 // of the installed machinery, and erroring here would fail lint on every
-// recorded artifact in any removed project that ever ran a Standard task,
+// recorded artifact in any removed project that ever ran a Relay task,
 // which is not the "record is intact" question lint is supposed to keep
 // asking. Every other caller passes removed=false, so a missing templates
 // directory in an installed (or being-installed) project still fails closed;

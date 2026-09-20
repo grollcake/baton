@@ -87,10 +87,10 @@ Director 모델은 `/model`로 맞추고 Planner와 Executor 모델은 위임할
 
 | 분류 | 흐름 |
 | --- | --- |
-| Direct | Director가 직접 처리하고 `REQUEST → RUN_DONE`을 기록한다. |
-| Standard | `REQUEST → PLANNED → EXECUTED → REVIEW → CLOSE`로 진행한다. |
+| Solo | Director가 직접 처리하고 `REQUEST → RUN_DONE`을 기록한다. |
+| Relay | `REQUEST → PLANNED → EXECUTED → REVIEW → CLOSE`로 진행한다. |
 
-Standard 작업의 기본 흐름은 다음과 같다.
+Relay 작업의 기본 흐름은 다음과 같다.
 
 1. Director가 요청을 분류한다.
 2. 세션의 브랜치 전략을 적용하고, 필요하면 작업 브랜치를 생성해 전환한다.
@@ -114,7 +114,7 @@ Standard 작업의 기본 흐름은 다음과 같다.
 <timestamp> | <task-id> | <event> | <role> | <summary> | <path?>
 ```
 
-Standard 작업의 산출물은 `.baton/runs/`에 같은 `<KEY>`로 저장한다.
+Relay 작업의 산출물은 `.baton/runs/`에 같은 `<KEY>`로 저장한다.
 
 | 파일 | 작성자 | 내용 |
 | --- | --- | --- |
@@ -187,7 +187,7 @@ chmod +x .baton/bin/baton
 
 - Director만 `BATON-LOG.txt`와 작업 상태를 변경한다.
 - Executor는 계획 범위를 임의로 넓히지 않는다.
-- Standard 작업은 사용자의 명시적 승인 전에는 종료하지 않는다.
+- Relay 작업은 사용자의 명시적 승인 전에는 종료하지 않는다.
 - 사용자에게 보고된 결함은 증거를 확보한 뒤 수정하고 스모크 테스트를 남긴다.
 - `.baton/`에 비밀정보, 자격증명, 개인정보, 민감한 운영정보를 저장하지 않는다.
 - Baton이 설치된 프로젝트에서는 커밋 전이나 업데이트 후

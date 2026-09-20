@@ -30,17 +30,17 @@ Planner와 Executor는 **Director를 통해서만** 통신합니다. 사용 도�
 
 새 세션을 시작할 때마다 Director는 먼저 Codex 또는 Claude Code를 감지하고 Director·Planner·Executor 모델을 묻습니다. `baton models get <platform>`의 직전 선택을 기본값으로, `baton models list <platform>`의 현재 목록을 선택지로 보여 줍니다. Director 모델이 현재 모델과 다르면 사용자가 `/model`로 바꾸고 `/status`로 확인한 뒤 계속합니다. Planner와 Executor 모델 및 reasoning effort는 위임할 때 명시하며, 확정값은 `baton models set`으로 OS 사용자 설정에 플랫폼별 저장합니다. 그 다음 이번 Baton 세션에서 Git 브랜치 전략을 사용할지 묻습니다: 항상 브랜치 사용, 브랜치 사용 안 함, 작업마다 확인.
 
-Director는 먼저 요청이 명백한 기록 제외 대상인지 가볍게 판단합니다. 기록이 필요한 요청이면 필수 지침·교훈 확인을 마친 뒤 `Direct` 또는 `Standard`로 분류합니다. Baton **부트스트랩**과 **업데이트**(`.baton/`·Baton 지시 파일 동기화)는 기록 제외가 아니며, Director가 직접 수행하면 `Direct`로 `REQUEST → RUN_DONE`을 기록합니다.
+Director는 먼저 요청이 명백한 기록 제외 대상인지 가볍게 판단합니다. 기록이 필요한 요청이면 필수 지침·교훈 확인을 마친 뒤 `Solo` 또는 `Relay`로 분류합니다. Baton **부트스트랩**과 **업데이트**(`.baton/`·Baton 지시 파일 동기화)는 기록 제외가 아니며, Director가 직접 수행하면 `Solo`로 `REQUEST → RUN_DONE`을 기록합니다.
 
 | 분류 | 일반적 범위 | 처리 방식 |
 | --- | --- | --- |
 | 기록 제외 | 단순 질문 답변, 짧은 설명, 브레인스토밍 | 응답만 하고 이벤트를 남기지 않음 |
-| `Direct` | 사소한 텍스트/설정 변경, 명백한 국소 편집, Baton 부트스트랩·업데이트 | Director가 직접 처리하고 `REQUEST → RUN_DONE` 기록 |
-| `Standard` | 다중 파일 구현, 설계 판단, 구현 검증이 필요한 작업 | 세션 브랜치 전략 적용 → Planner → Executor → Planner 검토 → 승인 후 필요 시 자동 병합 |
+| `Solo` | 사소한 텍스트/설정 변경, 명백한 국소 편집, Baton 부트스트랩·업데이트 | Director가 직접 처리하고 `REQUEST → RUN_DONE` 기록 |
+| `Relay` | 다중 파일 구현, 설계 판단, 구현 검증이 필요한 작업 | 세션 브랜치 전략 적용 → Planner → Executor → Planner 검토 → 승인 후 필요 시 자동 병합 |
 
 ## 4. 백그라운드 위임
 
-`Standard` 작업은 분류 직후 세션 시작 때 정한 Git 브랜치 전략을 따릅니다. 전용 작업 브랜치를 쓰는 경우 현재 브랜치를 기준 브랜치로 기억하고 작업 브랜치를 만든 뒤, 그 브랜치에서 `REQUEST`부터 기록합니다. 브랜치를 쓰지 않는 전략이면 현재 브랜치에서 기록과 변경을 진행합니다. 전용 작업 브랜치를 쓴 경우 승인 후 `CLOSE`을 기록해 승인 상태를 커밋한 다음 기준 브랜치로 자동 병합합니다. 위임은 가능한 한 백그라운드로 수행하며 Director는 위임 직후 사용자에게 짧은 상태를 반환하고 완료 대기·폴링·sleep으로 사용자 응답을 막지 않습니다. 하위 AI의 완료 통지에 의존하지 않고, 위임 직후 기대 산출물에 대해 `baton await <PLANNED|EXECUTED|REVIEW> <path>`를 백그라운드 명령으로 실행합니다(Claude Code에서는 `run_in_background: true`). 산출물이 `check-artifact`를 통과하면 0으로 종료되어 호스트가 Director를 깨우고, Director는 해당 이벤트를 기록합니다. 0이 아닌 종료는 제한 시간(기본 30분) 초과이므로 하위 AI 상태를 확인합니다. 사용자와 대화하는 도중 `await` 종료를 받으면 진행 중인 응답을 마친 직후, 다른 작업보다 먼저 이벤트 기록 → gate 확인 → 다음 단계 위임을 수행합니다. 통지를 놓친 경우의 안전망으로, Standard 작업이 열려 있는 동안 Director는 사용자 메시지마다 `baton status`를 한 번 실행합니다. `pending_artifact:` 줄은 완성됐지만 아직 기록되지 않은 산출물을 뜻하며 같은 방식으로 처리합니다.
+`Relay` 작업은 분류 직후 세션 시작 때 정한 Git 브랜치 전략을 따릅니다. 전용 작업 브랜치를 쓰는 경우 현재 브랜치를 기준 브랜치로 기억하고 작업 브랜치를 만든 뒤, 그 브랜치에서 `REQUEST`부터 기록합니다. 브랜치를 쓰지 않는 전략이면 현재 브랜치에서 기록과 변경을 진행합니다. 전용 작업 브랜치를 쓴 경우 승인 후 `CLOSE`을 기록해 승인 상태를 커밋한 다음 기준 브랜치로 자동 병합합니다. 위임은 가능한 한 백그라운드로 수행하며 Director는 위임 직후 사용자에게 짧은 상태를 반환하고 완료 대기·폴링·sleep으로 사용자 응답을 막지 않습니다. 하위 AI의 완료 통지에 의존하지 않고, 위임 직후 기대 산출물에 대해 `baton await <PLANNED|EXECUTED|REVIEW> <path>`를 백그라운드 명령으로 실행합니다(Claude Code에서는 `run_in_background: true`). 산출물이 `check-artifact`를 통과하면 0으로 종료되어 호스트가 Director를 깨우고, Director는 해당 이벤트를 기록합니다. 0이 아닌 종료는 제한 시간(기본 30분) 초과이므로 하위 AI 상태를 확인합니다. 사용자와 대화하는 도중 `await` 종료를 받으면 진행 중인 응답을 마친 직후, 다른 작업보다 먼저 이벤트 기록 → gate 확인 → 다음 단계 위임을 수행합니다. 통지를 놓친 경우의 안전망으로, Relay 작업이 열려 있는 동안 Director는 사용자 메시지마다 `baton status`를 한 번 실행합니다. `pending_artifact:` 줄은 완성됐지만 아직 기록되지 않은 산출물을 뜻하며 같은 방식으로 처리합니다.
 
 ## 5. 이벤트 타임라인
 
@@ -52,11 +52,11 @@ Director는 먼저 요청이 명백한 기록 제외 대상인지 가볍게 판�
 
 - `timestamp`는 로컬 시스템 시간 기준 `YYYY-MM-DDTHH:MM:SS` 형식으로 기록합니다.
 - `task-id`는 무작위 소문자 영문 4글자를 씁니다.
-- Director는 `REQUEST` 기록 시 `task-id` 하나를 정하고, 같은 Standard 작업의 `PLANNED`/`EXECUTED`/`REVIEW`/`FEEDBACK`/`CLOSE`까지 재사용합니다. 새 `REQUEST`마다 새 `task-id`를 씁니다.
+- Director는 `REQUEST` 기록 시 `task-id` 하나를 정하고, 같은 Relay 작업의 `PLANNED`/`EXECUTED`/`REVIEW`/`FEEDBACK`/`CLOSE`까지 재사용합니다. 새 `REQUEST`마다 새 `task-id`를 씁니다.
 - 이벤트는 `REQUEST`, `PLANNED`, `EXECUTED`, `REVIEW`, `FEEDBACK`, `CLOSE`, `RUN_DONE`만 씁니다.
 - Director 직접 처리 흐름은 `REQUEST → RUN_DONE`입니다.
 - 표준 처리 흐름은 `REQUEST` → `PLANNED` → `EXECUTED` → `REVIEW` → `CLOSE`입니다.
-- `Standard`의 `REQUEST`는 세션 브랜치 전략을 적용한 뒤 기록합니다. 전용 작업 브랜치를 쓰는 경우 승인 전에는 기준 브랜치에 해당 작업의 이벤트나 변경을 기록하지 않습니다.
+- `Relay`의 `REQUEST`는 세션 브랜치 전략을 적용한 뒤 기록합니다. 전용 작업 브랜치를 쓰는 경우 승인 전에는 기준 브랜치에 해당 작업의 이벤트나 변경을 기록하지 않습니다.
 - `FEEDBACK`은 사용자가 `CLOSE` 승인 전 피드백·결함을 알려줄 때 Director가 기록합니다. 같은 `task-id`와 산출물 파일 키를 유지합니다.
 - 사용자가 보고한 결함은 Director가 Executor에 전달하고, 수정 전 증거와 수정 후 셀프 스모크 테스트를 `RUN`에 기록합니다.
 - `FEEDBACK` 후 Director는 **현재 런에 추가**할지 **새로운 런**으로 돌릴지 사용자에게 묻습니다. 명백한 결함이면 사용자 확인 없이 현재 런에 추가합니다.
@@ -118,7 +118,7 @@ Director는 먼저 요청이 명백한 기록 제외 대상인지 가볍게 판�
 - 이전 라운드를 덮어쓰지 않습니다. 예외: `FEEDBACK` 후 현재 런에 추가할 때, `CLOSE` 이벤트 승인 전이면 `RUN-<NN>.md` 갱신을 허용합니다.
 - `<SLUG>`는 Director가 정한 소문자 kebab-case 작업 키를 씁니다.
 - `<YYYYMMDD>`와 `<HHMM>`은 Director가 `REQUEST`를 기록할 때의 로컬 시스템 날짜·시분(24시간, 구분자 없음)을 씁니다. 예: `20260526-1430-diary-write`.
-- `task-id`는 `BATON-LOG.txt` 이벤트 식별자이고, `<YYYYMMDD>-<HHMM>-<SLUG>`는 `.baton/runs/` 산출물 파일 키입니다. 같은 Standard 작업에서는 `task-id` 하나와 파일 키 하나를 함께 씁니다.
+- `task-id`는 `BATON-LOG.txt` 이벤트 식별자이고, `<YYYYMMDD>-<HHMM>-<SLUG>`는 `.baton/runs/` 산출물 파일 키입니다. 같은 Relay 작업에서는 `task-id` 하나와 파일 키 하나를 함께 씁니다.
 - 같은 작업의 모든 라운드 산출물은 같은 `<YYYYMMDD>-<HHMM>-<SLUG>` 키를 씁니다.
 - 각 `CLOSE`는 완료된 작업이 `PLAN`과 어떻게 달라졌는지, 또는 달라지지 않았다면 `none`을 기록합니다.
 - 산출물은 `.baton/templates/plan.md`, `run.md`, `review.md`, `close.md` 형식을 따릅니다.
@@ -149,8 +149,8 @@ Director는 먼저 요청이 명백한 기록 제외 대상인지 가볍게 판�
 
 1. Director가 요청을 분류합니다.
 2. 기록 제외 대상이면 응답만 하고 이벤트를 남기지 않습니다.
-3. `Direct`이면 Director가 직접 처리하고 `REQUEST → RUN_DONE` 이벤트 흐름으로 작업을 닫습니다.
-4. `Standard`이면 Director가 세션 Git 브랜치 전략을 적용한 뒤 `REQUEST`를 기록합니다.
+3. `Solo`이면 Director가 직접 처리하고 `REQUEST → RUN_DONE` 이벤트 흐름으로 작업을 닫습니다.
+4. `Relay`이면 Director가 세션 Git 브랜치 전략을 적용한 뒤 `REQUEST`를 기록합니다.
 5. Planner가 상단 `Director Brief`를 포함한 `PLAN`을 작성합니다.
 6. Director는 기본적으로 `Director Brief`만 읽고 완전성을 확인한 뒤, 그 안의 `Executor Prompt`로 Executor에게 위임합니다.
 7. Executor는 `PLAN`·성공 기준·범위에 따라 구현한 뒤 `RUN-01`을 쓰고, Director가 `EXECUTED`를 기록합니다.
@@ -162,9 +162,9 @@ Director는 먼저 요청이 명백한 기록 제외 대상인지 가볍게 판�
 13. `blocker`가 있으면 Director가 다음 라운드를 Executor에게 위임하고, Executor가 `RUN-<NN>`을 쓰면 Director가 `EXECUTED`를 기록한 뒤 Planner가 다음 `REVIEW`를 씁니다. `REVIEW-03` 전까지 사용자 승인 없이 진행합니다.
 14. `REVIEW-03`까지도 `blocker`가 남으면 Director는 상태를 보고하고 사용자에게 **재시도 / 계획 수정 / 부분 수락 / 중단** 중 선택을 요청합니다.
 
-Standard 작업에서 사용자 개입이 필요한 경우는 `CLOSE` 최종 승인, `CLOSE` 승인 전 피드백·결함(`FEEDBACK`)과 `FEEDBACK` 후 현재 런·새 런 선택, `REVIEW-03` 이후에도 `blocker`가 남는 경우, Director가 사용자 결정이 필요하다고 판단한 경우뿐입니다. 전용 작업 브랜치를 쓴 경우 승인이 끝나면 병합은 자동으로 진행하며 별도 확인을 받지 않습니다.
+Relay 작업에서 사용자 개입이 필요한 경우는 `CLOSE` 최종 승인, `CLOSE` 승인 전 피드백·결함(`FEEDBACK`)과 `FEEDBACK` 후 현재 런·새 런 선택, `REVIEW-03` 이후에도 `blocker`가 남는 경우, Director가 사용자 결정이 필요하다고 판단한 경우뿐입니다. 전용 작업 브랜치를 쓴 경우 승인이 끝나면 병합은 자동으로 진행하며 별도 확인을 받지 않습니다.
 
-`Direct` 작업은 사용자 완료 승인 없이 `RUN_DONE`으로 닫을 수 있습니다. 다만 장기 지침이나 재사용 가능한 교훈이 생겼다면 Director는 사용자에게 기록안을 제안하고, 사용자가 수락한 항목만 `GUIDANCE.md` 또는 `lesson-learned/`에 추가합니다.
+`Solo` 작업은 사용자 완료 승인 없이 `RUN_DONE`으로 닫을 수 있습니다. 다만 장기 지침이나 재사용 가능한 교훈이 생겼다면 Director는 사용자에게 기록안을 제안하고, 사용자가 수락한 항목만 `GUIDANCE.md` 또는 `lesson-learned/`에 추가합니다.
 
 ## 8. 위임과 보고
 
@@ -214,12 +214,12 @@ Executor가 Director에게 보고할 때는 다음만 간결히 포함합니다.
 
 ### 사용자에게 보여 주는 보고
 
-사용자 대상 보고는 기본적으로 짧게 작성합니다. `Direct` 작업은 결과, 핵심
+사용자 대상 보고는 기본적으로 짧게 작성합니다. `Solo` 작업은 결과, 핵심
 변경 범위, 검증만 1~3문장으로 알립니다. 생성·보존 파일 전체 목록, 프로토콜
 진행 설명, 비어 있는 리스크/다음 단계 섹션은 사용자가 요청하거나 조치가
 필요할 때만 포함합니다.
 
-`Standard` 승인 요청은 결과, 검증 상태, 조치할 nit/리스크, 사용자 직접
+`Relay` 승인 요청은 결과, 검증 상태, 조치할 nit/리스크, 사용자 직접
 점검 케이스 3~5개, `REVIEW` 경로만 우선 보여 줍니다. 상세 변경과 증거는
 요청받지 않는 한 산출물에 둡니다.
 
@@ -272,7 +272,7 @@ project-root/
 | `.baton/BATON-LOG.txt` | 필수 | 작업 이벤트 로그입니다 (추가 전용) |
 | `.baton/bin/baton[.exe]` | 목표 필수 | 상태 변경, gate, 위임 프롬프트, 산출물·로그 검증, 지시 블록 병합, 업데이트를 처리하는 현재 플랫폼용 Go CLI입니다. |
 | `.baton/lesson-learned/` | 누적 관리 | 완료된 작업에서 얻은 재사용 가능한 해결 지식이 쌓이는 디렉토리입니다. |
-| `.baton/runs/` | 목표 필수 | `Standard` 작업의 라운드 산출물이 쌓이는 디렉토리입니다. |
+| `.baton/runs/` | 목표 필수 | `Relay` 작업의 라운드 산출물이 쌓이는 디렉토리입니다. |
 | `.baton/templates/` | 목표 권장 | 산출물·누적 문서 작성 형식 예시입니다. |
 
 ## 11. 합류할 때 읽는 순서
@@ -307,7 +307,7 @@ Baton에 합류할 때의 읽기 순서는 다음과 같습니다.
 - 이슈 상태 변경
 - 다음 역할이나 후속 세션이 알아야 할 맥락 생성
 
-`Standard`로 분류된 작업은 라운드 산출물(`PLAN`/`RUN`/`REVIEW`/`CLOSE`)이 본문 기록이고, `BATON-LOG.txt`는 그 산출물을 가리키는 이벤트 인덱스 역할을 합니다.
+`Relay`로 분류된 작업은 라운드 산출물(`PLAN`/`RUN`/`REVIEW`/`CLOSE`)이 본문 기록이고, `BATON-LOG.txt`는 그 산출물을 가리키는 이벤트 인덱스 역할을 합니다.
 
 단순 질의응답, 짧은 설명, 브레인스토밍은 보통 기록하지 않습니다.
 사용자가 맥락 보존을 명시적으로 요청한 경우에는 예외로 기록할 수 있습니다.
@@ -390,7 +390,7 @@ Baton에 합류할 때의 읽기 순서는 다음과 같습니다.
 7. `.baton/GUIDANCE.md`, `.baton/lesson-learned/`, `.baton/BATON-LOG.txt`, `.baton/runs/`는 덮어쓰지 않습니다.
 8. `.baton/LESSON-LEARNED.md`는 프로젝트별 기록 인덱스이므로 덮어쓰지 않습니다.
 9. 업데이트가 성공하면 `.baton/VERSION`을 최신 upstream의 `VERSION` 값으로 갱신합니다.
-10. Director는 `BATON-LOG.txt`에 `REQUEST → RUN_DONE`을 추가합니다. 메타 작업이라 기록을 생략하지 않습니다. 보통 `Direct`이며, `summary`에 이전·이후 `VERSION`을 포함합니다. 범위가 `Standard`에 해당하면 전용 작업 브랜치에서 `REQUEST → PLANNED → EXECUTED → REVIEW → CLOSE`을 기록하고, 승인 후 자동 병합합니다.
+10. Director는 `BATON-LOG.txt`에 `REQUEST → RUN_DONE`을 추가합니다. 메타 작업이라 기록을 생략하지 않습니다. 보통 `Solo`이며, `summary`에 이전·이후 `VERSION`을 포함합니다. 범위가 `Relay`에 해당하면 전용 작업 브랜치에서 `REQUEST → PLANNED → EXECUTED → REVIEW → CLOSE`을 기록하고, 승인 후 자동 병합합니다.
 
 이전 버전의 `BATON-LOG.txt`가 `agent=`, `task=`, `TASK_BEGIN` 같은 형식을 사용하더라도 기존 줄은 수정하지 않습니다. 새 버전 적용 후 추가하는 이벤트부터 새 형식을 사용합니다.
 
@@ -494,4 +494,4 @@ Baton은 Director / Planner / Executor 에이전트 팀이 역할을 나누고, 
 ```
 
 기록 제외 대상이면 응답만 하고 이벤트를 남기지 않습니다.
-`Direct`이면 Director가 직접 처리하고 `REQUEST → RUN_DONE` 흐름이면 충분합니다.
+`Solo`이면 Director가 직접 처리하고 `REQUEST → RUN_DONE` 흐름이면 충분합니다.

@@ -148,7 +148,7 @@ func TestLintRejectsMissingFeedbackOrRunDonePath(t *testing.T) {
 		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
 		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
 		"2026-07-11T10:01:00 | fdbk | REQUEST  | Director | Feedback missing path",
-		"2026-07-11T10:01:01 | fdbk | RUN_DONE | Director | Direct work done | "+missingRun,
+		"2026-07-11T10:01:01 | fdbk | RUN_DONE | Director | Solo work done | "+missingRun,
 	)
 	if err := harness.fail("lint"); err == nil {
 		t.Fatal("lint accepted a RUN_DONE path that does not exist on disk")
