@@ -139,6 +139,8 @@ func (a *App) Run(args []string) error {
 		return a.runGuide(args)
 	case "lint":
 		return a.Lint()
+	case "revert-check":
+		return a.runRevertCheck(args)
 	case "merge-agent-block":
 		return a.runMergeAgentBlock(args)
 	case "update":
@@ -177,6 +179,8 @@ Configure and maintain:
   models <list|get|set> <codex|claude-code> [model options]
   guide <protocol|director|planner|executor|update|remove|uninstall|pause|lifecycle>
   lint
+  revert-check --check <command> [--rev <ref>] [--name-pattern <re>] [--keep] PATH...
+      (e.g. --name-pattern '--- FAIL: (\S+)' for go test)
   merge-agent-block <target-file> <source-file>
   update --upstream <baton-repo> [--apply]
   version

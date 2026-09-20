@@ -29,9 +29,12 @@ Include three to five concrete manual checks for the user.
 Reproduce what the `RUN` claims rather than accepting it. Run the commands it
 reports, and do that on a copy of the tree, never on the working tree.
 
-Check that each test the round added is load-bearing: revert the source change
-on that copy, confirm which tests fail, and confirm they fail for the reason the
-change was made. A test that passes either way is guarding something else.
+Check that each test the round added is load-bearing: `baton revert-check
+--check '<test command>' --name-pattern '<regexp>' <changed path>...` (for
+example `--name-pattern '--- FAIL: (\S+)'` with `go test`) reports which tests
+fail only after the revert, and confirms they fail for the reason the change
+was made -- see `new_output=`. A test that passes either way is guarding
+something else.
 
 When the round loosened a check, construct the case it would now let through and
 report what happened. If no such case can exist, say why.
