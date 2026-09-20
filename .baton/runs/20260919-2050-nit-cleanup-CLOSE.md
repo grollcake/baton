@@ -36,6 +36,11 @@ Reviewed Evidence: .baton/runs/20260919-2050-nit-cleanup-REVIEW-01.md
 - none. The executor implemented the six items the plan selected, in the order
   it gave, and left the three declined items untouched.
 
+## Lesson Candidates
+
+- A cleanup touching many files hides unrelated changes. Capture the output
+  before and after and diff it, rather than trusting the diff of the source.
+
 ## Remaining Nits
 
 - The plan and the run artifact both say the request path validator

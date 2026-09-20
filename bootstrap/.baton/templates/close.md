@@ -18,6 +18,11 @@ Reviewed Evidence: <path-to-review>
 
 - <deviation from the PLAN, or none>
 
+## Lesson Candidates
+
+- <reusable knowledge this round produced, or none. A lesson is something a
+  future round would do differently, not a summary of this one.>
+
 ## Remaining Nits
 
 - <nit or none>

@@ -42,6 +42,11 @@ Reviewed Evidence: .baton/runs/20260920-1605-rules-one-line-REVIEW-01.md
   earns the one clause it duplicates, because it is the only text an agent that
   skips the protocol still reads.
 
+## Lesson Candidates
+
+- Prose that restates a rule the tool enforces will drift from it. Of six rules
+  sampled in the instruction block, five were already stated elsewhere.
+
 ## Remaining Nits
 
 - The plan placed the short-status clause in the protocol; it is in the

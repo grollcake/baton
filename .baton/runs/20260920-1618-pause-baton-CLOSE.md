@@ -45,6 +45,11 @@ Reviewed Evidence: .baton/runs/20260920-1618-pause-baton-REVIEW-02.md
   returning after a week must be able to see when Baton stopped and whether a
   task was open then, which the stale next gate alone does not explain.
 
+## Lesson Candidates
+
+- The guard that matters most is the one nothing tests. Deleting the update
+  refusal left the whole suite green.
+
 ## Remaining Nits
 
 - The regression test for the update refusal detects that the guard is gone

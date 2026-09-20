@@ -38,6 +38,11 @@ Reviewed Evidence: .baton/runs/20260919-1700-concurrency-inflight-REVIEW-02.md
   been installed anywhere and carrying a legacy path for a file written hours
   earlier cost more than correcting it.
 
+## Lesson Candidates
+
+- A helper that signals failure as an empty string lets each call site pick
+  which way the unknown falls. One picked wrong and opened a safety gate.
+
 ## Remaining Nits
 
 - `reviewResult` reports an unreadable artifact as `""`, which both call sites

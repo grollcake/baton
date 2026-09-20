@@ -45,6 +45,11 @@ Reviewed Evidence: .baton/runs/20260919-1927-review-result-error-REVIEW-01.md
   nextCommand keeps using the ready check. The reviewer confirmed it is not a
   converted external reader.
 
+## Lesson Candidates
+
+- Write the equivalence tests before a refactor and run them against the old
+  code. Tests written after only prove the new code agrees with itself.
+
 ## Remaining Nits
 
 - The new runStatus branch guards on finding a REVIEW record and has no else

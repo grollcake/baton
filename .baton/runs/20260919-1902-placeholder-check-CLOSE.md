@@ -42,6 +42,11 @@ Reviewed Evidence: .baton/runs/20260919-1902-placeholder-check-REVIEW-01.md
   instead. No artifact content changed for that reason, and the plan's scope and
   success criteria are unchanged.
 
+## Lesson Candidates
+
+- A check derived from files must decide what happens when those files cannot
+  be read. An empty vocabulary accepts everything and fails nothing.
+
 ## Remaining Nits
 
 - RUN-01 claimed EXECUTED still catches an invented marker through its unresolved

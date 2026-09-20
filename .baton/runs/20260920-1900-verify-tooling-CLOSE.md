@@ -44,6 +44,11 @@ Reviewed Evidence: .baton/runs/20260920-1900-verify-tooling-REVIEW-02.md
   installed project, because the instruction to do it by hand ships to all of
   them.
 
+## Lesson Candidates
+
+- A procedure the protocol mandates and no tool performs gets reimplemented by
+  hand every time, differently.
+
 ## Remaining Nits
 
 - The Windows branch and the usage example are both untested: removing either

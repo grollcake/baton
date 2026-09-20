@@ -47,6 +47,11 @@ Reviewed Evidence: .baton/runs/20260920-1653-remove-baton-REVIEW-02.md
   own call, and that the public check still fails closed. Accepted, and
   recorded here because it was reported rather than found.
 
+## Lesson Candidates
+
+- A confirmation prompt is not a safeguard in an agent pipeline: the agent that
+  wanted to proceed answers it. A machine-checkable precondition is.
+
 ## Remaining Nits
 
 - `--purge` deletes ignored content under a tracked directory without naming it

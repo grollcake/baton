@@ -167,6 +167,8 @@ Director: test
 Approved By: User
 ## Acceptance
 ## Validation Summary
+## Lesson Candidates
+- none.
 ## Plan Deviations
 - none.
 `

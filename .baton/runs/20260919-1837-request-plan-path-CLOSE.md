@@ -42,6 +42,11 @@ Reviewed Evidence: .baton/runs/20260919-1837-request-plan-path-REVIEW-01.md
   for a note that itself used the notation it described. Only artifact wording
   changed; no source, test, or success criterion moved.
 
+## Lesson Candidates
+
+- Loosening a check can leave a test green for a reason that has evaporated.
+  When a rule is relaxed, find what else was relying on it.
+
 ## Remaining Nits
 
 - validateRequestPath discards the error the underlying validator produced and

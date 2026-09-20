@@ -54,6 +54,11 @@ Reviewed Evidence: .baton/runs/20260920-1821-uninstall-reachable-REVIEW-02.md
   instruction arrived late, so the artifact under-reported the round until it
   was corrected in place.
 
+## Lesson Candidates
+
+- Merging documents keeps the steps and loses the reasons. Recover the deleted
+  version and diff for reasoning, not for procedure.
+
 ## Remaining Nits
 
 - Both root pages point at the installed lifecycle document, which the reader
