@@ -197,7 +197,7 @@ func (a *App) buildRemovePlan() (removePlan, error) {
 		}
 	}
 
-	for _, name := range []string{timelineFile, legacyTimelineFile, "GUIDANCE.md", "LESSON-LEARNED.md", "lesson-learned", "runs", "CONCURRENCY.md"} {
+	for _, name := range []string{timelineFile, "GUIDANCE.md", "LESSON-LEARNED.md", "lesson-learned", "runs", "CONCURRENCY.md"} {
 		path := a.batonPath(name)
 		if _, statErr := os.Stat(path); statErr == nil {
 			plan.keptPaths = append(plan.keptPaths, path)
@@ -345,10 +345,6 @@ func (a *App) runRemove(args []string) error {
 
 	var records []Record
 	if _, statErr := os.Stat(a.batonPath(timelineFile)); statErr == nil {
-		if records, err = a.readRecords(); err != nil {
-			return err
-		}
-	} else if _, statErr := os.Stat(a.batonPath(legacyTimelineFile)); statErr == nil {
 		if records, err = a.readRecords(); err != nil {
 			return err
 		}

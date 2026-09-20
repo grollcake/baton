@@ -89,3 +89,5 @@
 2026-09-20T19:28:46 | cqso | EXECUTED | Executor | Always answer, carry the example, drop the shell assumption | .baton/runs/20260920-1900-verify-tooling-RUN-02.md
 2026-09-20T19:33:44 | cqso | REVIEW   | Planner  | Review round 02 | .baton/runs/20260920-1900-verify-tooling-REVIEW-02.md
 2026-09-20T19:34:33 | cqso | CLOSE    | Director | Add revert-check and a repository-only fixture maker | .baton/runs/20260920-1900-verify-tooling-CLOSE.md
+2026-09-20T19:41:37 | cevu | REQUEST  | Director | Remove every backward compatibility path | .baton/runs/20260920-1941-drop-legacy-PLAN.md
+2026-09-20T19:46:42 | cevu | RUN_DONE | Director | Every backward compatibility path is gone

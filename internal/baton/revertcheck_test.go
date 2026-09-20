@@ -208,7 +208,7 @@ func TestRevertCheckNeverCheckoutsOrRunsFromRecords(t *testing.T) {
 		t.Fatalf("revertcheck.go must not use a working-tree-mutating Git subcommand, found %s", match)
 	}
 
-	for _, banned := range []string{"BATON-LOG", "timelineFile", "GUIDANCE.md", "legacyTimelineFile"} {
+	for _, banned := range []string{"BATON-LOG", "timelineFile", "GUIDANCE.md"} {
 		if strings.Contains(text, banned) {
 			t.Fatalf("revertcheck.go must not read the check command from %s", banned)
 		}

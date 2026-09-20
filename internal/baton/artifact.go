@@ -115,16 +115,14 @@ func validateRequestPath(path string) error {
 }
 
 func (a *App) CheckArtifact(event, path, expectedTaskID string) error {
-	return a.checkArtifact(event, path, expectedTaskID, false, false)
+	return a.checkArtifact(event, path, expectedTaskID, false)
 }
 
-// checkArtifact validates an artifact. Rules added after a project installed
-// Baton cannot be met by artifacts already in its append-only history, so
-// allowLegacy relaxes those for lint while append still enforces them on new
-// artifacts. A present Status must be complete either way. removed is
-// templatePlaceholderTokens' removed-project bypass, threaded through from
-// lint's checkLog only.
-func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacy, removed bool) error {
+// checkArtifact validates an artifact against the current contract, with no
+// relaxation for older ones: every artifact this project holds must meet it.
+// removed is templatePlaceholderTokens' removed-project bypass, threaded
+// through from lint's checkLog only.
+func (a *App) checkArtifact(event, path, expectedTaskID string, removed bool) error {
 	if err := validateArtifactPath(event, path); err != nil {
 		return err
 	}
@@ -159,7 +157,6 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacy, rem
 		return fmt.Errorf("artifact-check: %s artifact must include an ISO date: %s", event, path)
 	}
 
-	statusRequired := !allowLegacy || statusLinePattern.MatchString(content)
 	switch event {
 	case eventPlanned:
 		checks := [][2]string{
@@ -169,7 +166,7 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacy, rem
 			{`^## Success Criteria[[:space:]]*$`, "must include Success Criteria"},
 			{`^## Validation[[:space:]]*$`, "must include Validation"},
 		}
-		if statusRequired {
+		{
 			checks = append(checks, [2]string{statusCompletePattern, "must set Status: complete"})
 		}
 		return checkArtifactLines(content, checks, event, path)
@@ -182,7 +179,7 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacy, rem
 			{`^## Validation[[:space:]]*$`, "must include Validation"},
 			{`^## Success Criteria Status[[:space:]]*$`, "must include Success Criteria Status"},
 		}
-		if !allowLegacy {
+		{
 			checks = append(checks,
 				[2]string{`^## Changes[[:space:]]*$`, "must include Changes"},
 				[2]string{`^## Unresolved Risks[[:space:]]*$`, "must include Unresolved Risks"})
@@ -197,14 +194,11 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacy, rem
 			{`^## Suggested User Checks[[:space:]]*$`, "must include Suggested User Checks"},
 			{`^## Evidence Reviewed[[:space:]]*$`, "must include Evidence Reviewed"},
 		}
-		if statusRequired {
+		{
 			checks = append(checks, [2]string{statusCompletePattern, "must set Status: complete"})
 		}
 		if err := checkArtifactLines(content, checks, event, path); err != nil {
 			return err
-		}
-		if allowLegacy {
-			return nil
 		}
 		if items := countSectionItems(content, "## Suggested User Checks"); items < 3 || items > 5 {
 			return fmt.Errorf("artifact-check: %s artifact must list three to five Suggested User Checks, found %d: %s", event, items, path)
@@ -218,14 +212,11 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacy, rem
 			{`^## Acceptance[[:space:]]*$`, "must include Acceptance"},
 			{`^## Validation Summary[[:space:]]*$`, "must include Validation Summary"},
 		}
-		if !allowLegacy {
+		{
 			checks = append(checks, [2]string{`^## Plan Deviations[[:space:]]*$`, "must include Plan Deviations"})
 		}
 		if err := checkArtifactLines(content, checks, event, path); err != nil {
 			return err
-		}
-		if allowLegacy {
-			return nil
 		}
 		if countSectionItems(content, "## Plan Deviations") < 1 {
 			return fmt.Errorf("artifact-check: %s artifact must list at least one Plan Deviations item: %s", event, path)

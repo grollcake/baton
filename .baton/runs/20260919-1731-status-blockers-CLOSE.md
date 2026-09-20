@@ -30,6 +30,14 @@ Reviewed Evidence: .baton/runs/20260919-1731-status-blockers-REVIEW-01.md
   `gate before-approval` agreed in all three
 - Round number verified as `02` both with and without a preceding `FEEDBACK`
 
+## Plan Deviations
+
+- none recorded at the time. This section was added to the CLOSE contract by a
+  later task on the same day, and this artifact predates it. Director filled it
+  in when backward compatibility was removed, because the repository had never
+  been installed anywhere and carrying a legacy path for a file written hours
+  earlier cost more than correcting it.
+
 ## Remaining Nits
 
 - The installed `.baton/bin/baton` carries this change only after a release
