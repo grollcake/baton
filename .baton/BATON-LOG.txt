@@ -58,3 +58,10 @@
 2026-09-20T16:48:33 | srkz | EXECUTED | Executor | Pin the update apply refusal and the real partial-failure shape | .baton/runs/20260920-1618-pause-baton-RUN-02.md
 2026-09-20T16:52:28 | srkz | REVIEW   | Planner  | Review round 02 | .baton/runs/20260920-1618-pause-baton-REVIEW-02.md
 2026-09-20T16:53:15 | srkz | CLOSE    | Director | Add pause and resume, carried by the rules block | .baton/runs/20260920-1618-pause-baton-CLOSE.md
+2026-09-20T16:53:46 | wbqt | REQUEST  | Director | Let a project remove Baton and keep its records | .baton/runs/20260920-1653-remove-baton-PLAN.md
+2026-09-20T17:01:51 | wbqt | PLANNED  | Planner  | Let a project remove Baton and keep its records | .baton/runs/20260920-1653-remove-baton-PLAN.md
+2026-09-20T17:20:47 | wbqt | EXECUTED | Executor | Add remove with a dry run and a purge guard | .baton/runs/20260920-1653-remove-baton-RUN-01.md
+2026-09-20T17:26:45 | wbqt | REVIEW   | Planner  | Review round 01 | .baton/runs/20260920-1653-remove-baton-REVIEW-01.md
+2026-09-20T17:57:06 | wbqt | EXECUTED | Executor | Report the whole blocking path in the purge refusal | .baton/runs/20260920-1653-remove-baton-RUN-02.md
+2026-09-20T18:00:47 | wbqt | REVIEW   | Planner  | Review round 02 | .baton/runs/20260920-1653-remove-baton-REVIEW-02.md
+2026-09-20T18:02:13 | wbqt | CLOSE    | Director | Add remove, keeping the records by default | .baton/runs/20260920-1653-remove-baton-CLOSE.md

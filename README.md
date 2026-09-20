@@ -58,6 +58,21 @@ Bash에서 실행할 수 있다. Git 연동 기능을 사용하려면 `git`이 `
 거부하고, 강제로 진행하려면 `--force`를 준다. 일시 중지 중에는 `update`와
 `merge-agent-block`이 거부되므로, 업데이트가 필요하면 먼저 `resume`한다.
 
+### 제거
+
+`baton remove --apply`는 프로젝트에서 Baton을 뺀다. `AGENTS.md`/`CLAUDE.md`의
+`<baton-rules>` 블록과 Baton이 설치한 파일(`PROTOCOL.md` 등 관리 문서,
+`VERSION`, `bin/`, `templates/`)을 지우되, `BATON-LOG.txt`와 `runs/`,
+`GUIDANCE.md`, `LESSON-LEARNED.md`, `lesson-learned/`는 그대로 둔다. 기본
+동작은 되돌릴 수 없으며(`--apply` 없이는 무엇이 지워질지만 보여 준다), 열린
+작업이 있으면 기본적으로 거부하고 강제로 진행하려면 `--force`를 준다.
+`resume`은 제거된 프로젝트에서 동작하지 않으며, 되돌리려면 부트스트랩을 다시
+받아야 한다.
+
+기록까지 함께 지우려면 `--purge`를 추가한다. `.baton/` 아래에서 Git이
+무시하지 않는 모든 경로가 커밋되어 있고 변경 사항이 없을 때만 허용되며, 그
+전제가 지켜지지 않으면 아무것도 지우지 않고 어떤 경로가 문제인지 알려 준다.
+
 ## 작업 흐름
 
 Baton 세션을 시작할 때마다 Director는 Codex 또는 Claude Code를 감지하고

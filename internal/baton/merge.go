@@ -1,6 +1,7 @@
 package baton
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -63,6 +64,59 @@ func computeReplacedContent(target string, block []byte) ([]byte, os.FileMode, e
 		merged = append(merged, '\n')
 	}
 	return merged, mode, nil
+}
+
+// computeRemovedContent computes target's content with its <baton-rules>
+// block cut out, following Decision 3's seam rules:
+//
+//   - block last in the file (what MergeAgentBlock produces when it appends,
+//     and so the shape every bootstrapped or updated project has): cut the
+//     block and everything after it, then trim the remainder to exactly one
+//     trailing newline;
+//   - block in the middle (only reachable by hand placement): cut the block
+//     and collapse the run of newlines spanning the seam to exactly one
+//     blank line;
+//   - nothing but the block, i.e. the remainder on both sides is empty or
+//     whitespace only: report wholeFileEmpty so the caller deletes the file
+//     instead of writing an empty one.
+//
+// It returns an error if target carries no <baton-rules> block; the caller is
+// expected to have already classified the block as removable.
+func computeRemovedContent(target string) (content []byte, mode os.FileMode, wholeFileEmpty bool, err error) {
+	original, err := os.ReadFile(target)
+	if err != nil {
+		return nil, 0, false, err
+	}
+	fileMode := os.FileMode(0o644)
+	if info, statErr := os.Stat(target); statErr == nil {
+		fileMode = info.Mode().Perm()
+	}
+	location := batonBlockPattern.FindIndex(original)
+	if location == nil {
+		return nil, 0, false, fmt.Errorf("%s carries no <baton-rules> block", target)
+	}
+	before := original[:location[0]]
+	after := original[location[1]:]
+
+	if len(bytes.TrimSpace(before)) == 0 && len(bytes.TrimSpace(after)) == 0 {
+		return nil, fileMode, true, nil
+	}
+
+	if len(bytes.TrimSpace(after)) == 0 {
+		trimmed := bytes.TrimRight(before, "\n")
+		result := append(append([]byte{}, trimmed...), '\n')
+		return result, fileMode, false, nil
+	}
+
+	trimmedBefore := bytes.TrimRight(before, "\n")
+	trimmedAfter := bytes.TrimLeft(after, "\n")
+	var result []byte
+	result = append(result, trimmedBefore...)
+	if len(trimmedBefore) > 0 {
+		result = append(result, '\n', '\n')
+	}
+	result = append(result, trimmedAfter...)
+	return result, fileMode, false, nil
 }
 
 func (a *App) runMergeAgentBlock(args []string) error {

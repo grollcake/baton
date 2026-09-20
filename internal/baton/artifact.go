@@ -24,7 +24,21 @@ var (
 // template. If the templates cannot be read or yield no token, this returns
 // an error instead of an empty set: an empty set would make the check accept
 // every artifact silently, turning it off without anything failing.
-func (a *App) templatePlaceholderTokens() (map[string]bool, error) {
+// removed is true only when lint's checkLog is checking a removed project's
+// history (Decision 6): remove deletes .baton/templates/ along with the rest
+// of the installed machinery, and erroring here would fail lint on every
+// recorded artifact in any removed project that ever ran a Standard task,
+// which is not the "record is intact" question lint is supposed to keep
+// asking. Every other caller passes removed=false, so a missing templates
+// directory in an installed (or being-installed) project still fails closed;
+// a templates/ that exists but is empty or token-free is a different, real
+// misconfiguration and still errors below regardless of removed.
+func (a *App) templatePlaceholderTokens(removed bool) (map[string]bool, error) {
+	if removed {
+		if _, err := os.Stat(a.batonPath("templates")); os.IsNotExist(err) {
+			return map[string]bool{}, nil
+		}
+	}
 	matches, err := filepath.Glob(a.batonPath("templates", "*.md"))
 	if err != nil {
 		return nil, fmt.Errorf("artifact-check: cannot read templates: %w", err)
@@ -101,14 +115,16 @@ func validateRequestPath(path string) error {
 }
 
 func (a *App) CheckArtifact(event, path, expectedTaskID string) error {
-	return a.checkArtifact(event, path, expectedTaskID, false)
+	return a.checkArtifact(event, path, expectedTaskID, false, false)
 }
 
 // checkArtifact validates an artifact. Rules added after a project installed
 // Baton cannot be met by artifacts already in its append-only history, so
 // allowLegacy relaxes those for lint while append still enforces them on new
-// artifacts. A present Status must be complete either way.
-func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacy bool) error {
+// artifacts. A present Status must be complete either way. removed is
+// templatePlaceholderTokens' removed-project bypass, threaded through from
+// lint's checkLog only.
+func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacy, removed bool) error {
 	if err := validateArtifactPath(event, path); err != nil {
 		return err
 	}
@@ -121,7 +137,7 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, allowLegacy bool
 		return err
 	}
 	content := string(contentBytes)
-	tokens, err := a.templatePlaceholderTokens()
+	tokens, err := a.templatePlaceholderTokens(removed)
 	if err != nil {
 		return err
 	}

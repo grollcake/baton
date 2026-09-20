@@ -94,9 +94,13 @@ func (a *App) runUpdate(args []string) error {
 	fmt.Fprintf(a.Stdout, "Baton update: %s -> %s\n", currentVersion, nextVersion)
 
 	pausedMessage := a.pausedUpdateMessage()
+	removedMessage := a.removedUpdateMessage()
 	if !parsed.flags["--apply"] {
 		if pausedMessage != "" {
 			fmt.Fprintln(a.Stdout, pausedMessage)
+		}
+		if removedMessage != "" {
+			fmt.Fprintln(a.Stdout, removedMessage)
 		}
 		fmt.Fprint(a.Stdout, `Dry run. Re-run with --apply to update:
 - WARNING: --apply replaces the managed files below; review local customizations first.
@@ -122,6 +126,9 @@ Preserved:
 	}
 	if pausedMessage != "" {
 		return errors.New(pausedMessage)
+	}
+	if removedMessage != "" {
+		return errors.New(removedMessage)
 	}
 	if err := a.preflightUpdate(upstream); err != nil {
 		return err

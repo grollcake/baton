@@ -371,7 +371,11 @@ func TestWriteInstructionBlocksRestoresOnPartialFailure(t *testing.T) {
 	}
 	defer exec.Command(chflags, "nouchg", file2).Run()
 
-	writeErr := writeInstructionBlocks([]string{file1, file2}, []byte(pausedBlock))
+	content, err := spliceBlockIntoFiles([]string{file1, file2}, []byte(pausedBlock))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeErr := writeInstructionBlocks([]string{file1, file2}, content)
 	if writeErr == nil {
 		t.Fatal("expected the second file's write to fail")
 	}

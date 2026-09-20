@@ -144,6 +144,9 @@ targets, not excluded meta work.
 A project can set Baton aside with `<baton> pause` and restore it with
 `<baton> resume`; both change only the instruction-file rules block, never
 `.baton/` records, and a paused project must resume before it can update.
+A project can take Baton out with `<baton> remove --apply`, which deletes the
+rules block and the files Baton installed, keeps `.baton/` records unless
+`--purge` is given, and cannot be undone.
 
 Baton uses the native `.baton/bin/baton[.exe]` Go binary and
 does not require Go or a specific shell in installed projects. On Windows, it

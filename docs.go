@@ -7,6 +7,7 @@ package docs
 import (
 	"embed"
 	"errors"
+	"fmt"
 	"io/fs"
 	"regexp"
 )
@@ -25,14 +26,14 @@ func Managed(name string) ([]byte, error) {
 	return fs.ReadFile(managed, "bootstrap/.baton/"+name)
 }
 
-//go:embed bootstrap/AGENTS.md
-var bootstrapAgents embed.FS
+//go:embed bootstrap/AGENTS.md bootstrap/CLAUDE.md
+var bootstrapInstructions embed.FS
 
 // ActiveBlock returns the <baton-rules> block this binary ships in
 // bootstrap/AGENTS.md, the active-state text pause/resume and lint compare
 // installed blocks against.
 func ActiveBlock() ([]byte, error) {
-	content, err := fs.ReadFile(bootstrapAgents, "bootstrap/AGENTS.md")
+	content, err := fs.ReadFile(bootstrapInstructions, "bootstrap/AGENTS.md")
 	if err != nil {
 		return nil, err
 	}
@@ -41,4 +42,14 @@ func ActiveBlock() ([]byte, error) {
 		return nil, errors.New("bootstrap/AGENTS.md carries no <baton-rules> block")
 	}
 	return block, nil
+}
+
+// ShippedInstructionFile returns the shipped bytes of an instruction file
+// this binary bootstraps whole -- "AGENTS.md" or "CLAUDE.md" -- so remove can
+// recognise a file it wrote in full (Decision 3) by whole-file comparison.
+func ShippedInstructionFile(name string) ([]byte, error) {
+	if name != "AGENTS.md" && name != "CLAUDE.md" {
+		return nil, fmt.Errorf("not a shipped instruction file: %s", name)
+	}
+	return fs.ReadFile(bootstrapInstructions, "bootstrap/"+name)
 }

@@ -13,8 +13,9 @@ import (
 )
 
 type lintState struct {
-	app    *App
-	errors int
+	app     *App
+	errors  int
+	removed bool
 }
 
 func (state *lintState) ok(format string, args ...any) {
@@ -66,51 +67,42 @@ var batonBlockPattern = regexp.MustCompile(`(?s)<baton-rules>.*?</baton-rules>`)
 // (Decision 6). It requires equality only between files that exist (gap A:
 // a Claude-only project is fully checked, not silently skipped) and treats
 // two present blocks that are identically anything-other-than-shipped-text,
-// including identically emptied, as an error rather than a pass (gap B).
+// including identically emptied, as an error rather than a pass (gap B). A
+// present file carrying no block is no longer an error by itself: it is
+// "not in effect here" when every present file agrees, and an error only when
+// present files disagree over whether they carry one at all.
 func (state *lintState) checkAgentBlocks() {
 	agentsPath := filepath.Join(state.app.ProjectDir, "AGENTS.md")
 	claudePath := filepath.Join(state.app.ProjectDir, "CLAUDE.md")
-	agents, agentsErr := os.ReadFile(agentsPath)
-	claude, claudeErr := os.ReadFile(claudePath)
-	haveAgents := agentsErr == nil
-	haveClaude := claudeErr == nil
-	if !haveAgents && !haveClaude {
+	agentsStatus, haveAgents, agentsErr := classifyInstructionFile(agentsPath)
+	claudeStatus, haveClaude, claudeErr := classifyInstructionFile(claudePath)
+	if agentsErr != nil || claudeErr != nil {
+		state.err("Baton block matches neither the active nor the paused block this binary ships; run an update or restore it")
 		return
 	}
 
-	var agentsBlock, claudeBlock []byte
-	if haveAgents {
-		agentsBlock = batonBlockPattern.Find(agents)
-		if len(agentsBlock) == 0 {
-			state.err("AGENTS.md missing <baton-rules> block")
-			return
+	if haveAgents && haveClaude && agentsStatus != claudeStatus {
+		switch {
+		case agentsStatus == blockAbsent:
+			state.err("CLAUDE.md carries a Baton block and AGENTS.md does not")
+		case claudeStatus == blockAbsent:
+			state.err("AGENTS.md carries a Baton block and CLAUDE.md does not")
+		default:
+			state.err("AGENTS.md and CLAUDE.md Baton blocks differ")
 		}
-	}
-	if haveClaude {
-		claudeBlock = batonBlockPattern.Find(claude)
-		if len(claudeBlock) == 0 {
-			state.err("CLAUDE.md missing <baton-rules> block")
-			return
-		}
-	}
-	if haveAgents && haveClaude && !bytes.Equal(agentsBlock, claudeBlock) {
-		state.err("AGENTS.md and CLAUDE.md Baton blocks differ")
 		return
 	}
-	block := agentsBlock
+	status := agentsStatus
 	if !haveAgents {
-		block = claudeBlock
-	}
-	status, err := classifyBlock(block)
-	if err != nil {
-		state.err("%s", err)
-		return
+		status = claudeStatus
 	}
 	switch status {
 	case blockActive:
 		state.ok("AGENTS.md and CLAUDE.md Baton blocks match (active)")
 	case blockPaused:
 		state.ok("Baton is paused; records under .baton/ are unchanged by a pause")
+	case blockAbsent:
+		state.ok("Baton is not in effect here; .baton/ holds the records of work done under it")
 	default:
 		state.err("Baton block matches neither the active nor the paused block this binary ships; run an update or restore it")
 	}
@@ -140,16 +132,26 @@ var requiredTrackedPaths = []string{
 	"templates", "runs", "lesson-learned",
 }
 
+// keptTrackedPaths is requiredTrackedPaths narrowed to the paths a removed
+// project still has (Decision 6): the record, not the installed machinery.
+var keptTrackedPaths = []string{"GUIDANCE.md", "LESSON-LEARNED.md", "runs", "lesson-learned"}
+
 // checkRequiredPathsTracked checks each protocol-required path individually,
 // because a project's .gitignore can match a single file (e.g. "*.log") or a
 // single directory without matching the whole .baton directory, which
-// checkGitTracking's whole-directory check cannot see.
-func (state *lintState) checkRequiredPathsTracked() {
+// checkGitTracking's whole-directory check cannot see. In a removed project
+// it checks only the paths removal leaves behind (keptTrackedPaths), since
+// the installed-machinery paths no longer exist to check.
+func (state *lintState) checkRequiredPathsTracked(removed bool) {
 	if _, err := state.app.runGit("rev-parse", "--git-dir"); err != nil {
 		return
 	}
+	paths := requiredTrackedPaths
+	if removed {
+		paths = keptTrackedPaths
+	}
 	var ignored []string
-	for _, name := range requiredTrackedPaths {
+	for _, name := range paths {
 		full := state.app.batonPath(name)
 		if _, err := state.app.runGit("check-ignore", "--quiet", full); err == nil {
 			ignored = append(ignored, full)
@@ -244,7 +246,7 @@ func (state *lintState) checkLog() {
 		if record.Path != "" {
 			switch {
 			case requiresArtifact:
-				if artifactErr := state.app.checkArtifact(record.Event, record.Path, record.TaskID, true); artifactErr != nil {
+				if artifactErr := state.app.checkArtifact(record.Event, record.Path, record.TaskID, true, state.removed); artifactErr != nil {
 					state.err("Baton log line %d: %s", lineNumber, artifactErr)
 				}
 			case record.Event == eventRequest:
@@ -364,28 +366,51 @@ func (a *App) reviewResult(path string) (reviewOutcome, error) {
 	return reviewBlockers, nil
 }
 
+// Lint checks a project's installed Baton machinery and its record. A
+// removed project (Decision 6: every present instruction file carries no
+// Baton block, and .baton/ still exists) skips every check that requires the
+// installed machinery -- the managed documents, VERSION, the binary, its
+// executable bit, its checksum, bin/, and templates/ -- and keeps every
+// check that concerns the record itself: GUIDANCE.md, LESSON-LEARNED.md,
+// runs/, lesson-learned/, the timeline, the legacy scripts/protocol-guard
+// checks, both Git-tracking checks over the kept subset of
+// requiredTrackedPaths, and checkLog.
 func (a *App) Lint() error {
-	state := &lintState{app: a}
-	for _, name := range []string{"PROTOCOL.md", "DIRECTOR.md", "PLANNER.md", "EXECUTOR.md", "HOW-TO-UPDATE.md", "VERSION", "GUIDANCE.md", "LESSON-LEARNED.md"} {
+	status, statusErr := a.projectBlockState()
+	removed := statusErr == nil && status == blockAbsent
+	state := &lintState{app: a, removed: removed}
+
+	if !removed {
+		for _, name := range []string{"PROTOCOL.md", "DIRECTOR.md", "PLANNER.md", "EXECUTOR.md", "HOW-TO-UPDATE.md", "VERSION"} {
+			state.requireFile(a.batonPath(name))
+		}
+	}
+	for _, name := range []string{"GUIDANCE.md", "LESSON-LEARNED.md"} {
 		state.requireFile(a.batonPath(name))
 	}
 	state.requireTimeline()
-	state.requireFile(a.installedBinaryPath())
-	state.requireFile(a.batonPath("bin", "SHA256SUMS"))
-	for _, name := range []string{"templates", "runs", "lesson-learned", "bin"} {
+	dirs := []string{"runs", "lesson-learned"}
+	if !removed {
+		state.requireFile(a.installedBinaryPath())
+		state.requireFile(a.batonPath("bin", "SHA256SUMS"))
+		dirs = append([]string{"templates"}, append(dirs, "bin")...)
+	}
+	for _, name := range dirs {
 		state.requireDir(a.batonPath(name))
 	}
-	if a.GOOS != "windows" {
-		if info, err := os.Stat(a.installedBinaryPath()); err == nil && info.Mode()&0o111 != 0 {
-			state.ok("baton binary is executable")
-		} else {
-			state.err("baton binary is not executable")
+	if !removed {
+		if a.GOOS != "windows" {
+			if info, err := os.Stat(a.installedBinaryPath()); err == nil && info.Mode()&0o111 != 0 {
+				state.ok("baton binary is executable")
+			} else {
+				state.err("baton binary is not executable")
+			}
 		}
-	}
-	if err := verifyChecksum(a.installedBinaryPath(), a.batonPath("bin", "SHA256SUMS"), filepath.Join(a.GOOS+"-"+a.GOARCH, binaryName(a.GOOS))); err != nil {
-		state.err("baton binary checksum failed: %s", err)
-	} else {
-		state.ok("baton binary checksum matches")
+		if err := verifyChecksum(a.installedBinaryPath(), a.batonPath("bin", "SHA256SUMS"), filepath.Join(a.GOOS+"-"+a.GOARCH, binaryName(a.GOOS))); err != nil {
+			state.err("baton binary checksum failed: %s", err)
+		} else {
+			state.ok("baton binary checksum matches")
+		}
 	}
 	if _, err := os.Stat(a.batonPath("scripts")); os.IsNotExist(err) {
 		state.ok("legacy scripts directory absent")
@@ -398,9 +423,11 @@ func (a *App) Lint() error {
 		state.err("legacy protocol-guard must be removed")
 	}
 	state.checkAgentBlocks()
-	state.checkManagedDocuments()
+	if !removed {
+		state.checkManagedDocuments()
+	}
 	state.checkGitTracking()
-	state.checkRequiredPathsTracked()
+	state.checkRequiredPathsTracked(removed)
 	state.checkLog()
 	if state.errors > 0 {
 		return fmt.Errorf("baton-lint failed: %d error(s)", state.errors)
