@@ -57,6 +57,11 @@ Reviewed Evidence: .baton/runs/20260920-1531-timeline-rename-REVIEW-01.md
   about commits, so this is a gap rather than a violation. Recorded here; not
   addressed in this round, because stating a new rule was out of scope.
 
+## Lesson Candidates
+
+- A migration that only runs in update never runs, because the update is
+  driven by the binary being replaced. Migrate where the new code first writes.
+
 ## Remaining Nits
 
 - The update preflight re-implements the two-name check inline instead of using

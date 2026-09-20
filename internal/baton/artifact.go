@@ -212,14 +212,16 @@ func (a *App) checkArtifact(event, path, expectedTaskID string, removed bool) er
 			{`^## Acceptance[[:space:]]*$`, "must include Acceptance"},
 			{`^## Validation Summary[[:space:]]*$`, "must include Validation Summary"},
 		}
-		{
-			checks = append(checks, [2]string{`^## Plan Deviations[[:space:]]*$`, "must include Plan Deviations"})
-		}
+		checks = append(checks,
+			[2]string{`^## Plan Deviations[[:space:]]*$`, "must include Plan Deviations"},
+			[2]string{`^## Lesson Candidates[[:space:]]*$`, "must include Lesson Candidates"})
 		if err := checkArtifactLines(content, checks, event, path); err != nil {
 			return err
 		}
-		if countSectionItems(content, "## Plan Deviations") < 1 {
-			return fmt.Errorf("artifact-check: %s artifact must list at least one Plan Deviations item: %s", event, path)
+		for _, section := range []string{"## Plan Deviations", "## Lesson Candidates"} {
+			if countSectionItems(content, section) < 1 {
+				return fmt.Errorf("artifact-check: %s artifact must list at least one item under %s: %s", event, section, path)
+			}
 		}
 		return nil
 	}

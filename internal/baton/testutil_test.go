@@ -233,6 +233,8 @@ Approved By: User
 - Accepted.
 ## Validation Summary
 - Test passed.
+## Lesson Candidates
+- none.
 ## Plan Deviations
 - none.
 `, taskID))

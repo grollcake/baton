@@ -38,6 +38,11 @@ Reviewed Evidence: .baton/runs/20260919-1731-status-blockers-REVIEW-01.md
   been installed anywhere and carrying a legacy path for a file written hours
   earlier cost more than correcting it.
 
+## Lesson Candidates
+
+- A gate and the guidance that points at it can disagree. Whenever a check
+  refuses a state, something must also tell the reader that state is coming.
+
 ## Remaining Nits
 
 - The installed `.baton/bin/baton` carries this change only after a release

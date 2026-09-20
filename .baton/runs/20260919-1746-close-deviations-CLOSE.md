@@ -37,6 +37,11 @@ Reviewed Evidence: .baton/runs/20260919-1746-close-deviations-REVIEW-01.md
   cause in the installed binary, which set expectations for validation and
   reporting but changed no scope, no file list, and no success criterion.
 
+## Lesson Candidates
+
+- Requiring a heading is not requiring content. A section that may be empty is
+  a section every artifact passes by having.
+
 ## Remaining Nits
 
 - `validClose` in `coverage_test.go` and `writeClose` in `testutil_test.go` both
