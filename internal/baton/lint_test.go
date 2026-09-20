@@ -6,6 +6,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	docs "github.com/grollcake/baton"
 )
 
 func TestLintDoesNotExecutePaths(t *testing.T) {
@@ -304,6 +306,50 @@ func TestGuidePrintsShippedDocuments(t *testing.T) {
 	}
 	if err := harness.fail("guide"); err == nil {
 		t.Fatal("guide accepted missing arguments")
+	}
+}
+
+// TestGuideDocumentsAllResolve is V4: every key in guideDocuments must
+// resolve through docs.Managed without error, and the lifecycle aliases
+// (remove, uninstall, pause, lifecycle) must name the same file as update.
+// Delete an alias and this fails; point one at a non-existent file and it
+// fails too.
+func TestGuideDocumentsAllResolve(t *testing.T) {
+	for key, name := range guideDocuments {
+		if _, err := docs.Managed(name); err != nil {
+			t.Fatalf("guideDocuments[%q] = %q does not resolve: %v", key, name, err)
+		}
+	}
+	for _, alias := range []string{"remove", "uninstall", "pause", "lifecycle"} {
+		if guideDocuments[alias] != guideDocuments["update"] {
+			t.Fatalf("guideDocuments[%q] = %q, want same file as update (%q)", alias, guideDocuments[alias], guideDocuments["update"])
+		}
+	}
+}
+
+func TestGuideLifecycleAliasesPrintSameBytes(t *testing.T) {
+	harness := newHarness(t)
+	want := harness.run(t, "guide", "update")
+	for _, alias := range []string{"remove", "uninstall", "pause", "lifecycle"} {
+		if got := harness.run(t, "guide", alias); got != want {
+			t.Fatalf("guide %s printed different bytes than guide update", alias)
+		}
+	}
+}
+
+// TestHowToUpdateCoversAllProcedures is V5: the installed lifecycle document
+// must still mention every procedure the protocol names. Cheap, and it is
+// the only automated guard against a later edit silently dropping one.
+func TestHowToUpdateCoversAllProcedures(t *testing.T) {
+	content, err := docs.Managed("HOW-TO-UPDATE.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(content)
+	for _, want := range []string{"pause", "resume", "remove --apply", "--purge", "update --upstream"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("HOW-TO-UPDATE.md is missing %q", want)
+		}
 	}
 }
 

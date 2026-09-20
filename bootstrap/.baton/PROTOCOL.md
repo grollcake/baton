@@ -141,14 +141,17 @@ Commit `.baton/` to Git. Do not add it to `.gitignore`. When updating,
 read `.baton/HOW-TO-UPDATE.md` first. Bootstrap and update are recording
 targets, not excluded meta work.
 
+Baton uses the native `.baton/bin/baton[.exe]` Go binary and
+does not require Go or a specific shell in installed projects. On Windows, it
+can run from PowerShell, cmd, or Git Bash. Git-integrated commands require
+`git` to be available on `PATH`.
+
+## Pause, Remove, And Update
+
 A project can set Baton aside with `<baton> pause` and restore it with
 `<baton> resume`; both change only the instruction-file rules block, never
 `.baton/` records, and a paused project must resume before it can update.
 A project can take Baton out with `<baton> remove --apply`, which deletes the
 rules block and the files Baton installed, keeps `.baton/` records unless
-`--purge` is given, and cannot be undone.
-
-Baton uses the native `.baton/bin/baton[.exe]` Go binary and
-does not require Go or a specific shell in installed projects. On Windows, it
-can run from PowerShell, cmd, or Git Bash. Git-integrated commands require
-`git` to be available on `PATH`.
+`--purge` is given, and cannot be undone. All three procedures are in
+`.baton/HOW-TO-UPDATE.md`.

@@ -175,7 +175,7 @@ Record and inspect state:
 
 Configure and maintain:
   models <list|get|set> <codex|claude-code> [model options]
-  guide <protocol|director|planner|executor|update>
+  guide <protocol|director|planner|executor|update|remove|uninstall|pause|lifecycle>
   lint
   merge-agent-block <target-file> <source-file>
   update --upstream <baton-repo> [--apply]
