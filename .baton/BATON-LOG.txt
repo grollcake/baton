@@ -74,3 +74,5 @@
 2026-09-20T18:41:15 | kovh | EXECUTED | Executor | Restore the root pages and the pause-first guidance | .baton/runs/20260920-1821-uninstall-reachable-RUN-02.md
 2026-09-20T18:47:14 | kovh | REVIEW   | Planner  | Review round 02 | .baton/runs/20260920-1821-uninstall-reachable-REVIEW-02.md
 2026-09-20T18:48:21 | kovh | CLOSE    | Director | Fold the lifecycle into the document that reaches a project | .baton/runs/20260920-1821-uninstall-reachable-CLOSE.md
+2026-09-20T18:48:54 | tcbx | REQUEST  | Director | Point the root pages where their reader can look
+2026-09-20T18:50:02 | tcbx | RUN_DONE | Director | Root pages point where their reader can look

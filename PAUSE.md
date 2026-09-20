@@ -2,8 +2,10 @@
 
 이 문서도 [`UNINSTALL.md`](UNINSTALL.md)와 같은 독자를 위한 것입니다. 아직
 설치하지 않고 이 저장소를 웹에서 읽으며 도입 여부를 판단하는 사람이라
-`.baton/`을 볼 수 없습니다. 절차는 여기 없습니다 -- 설치 후에는
-`.baton/HOW-TO-UPDATE.md`와 `<baton> guide pause`에 있습니다.
+`.baton/`을 볼 수 없습니다. 절차는 여기 없습니다 -- 설치 전에는
+[`bootstrap/.baton/HOW-TO-UPDATE.md`](bootstrap/.baton/HOW-TO-UPDATE.md)에서
+읽을 수 있고, 설치 후에는 같은 문서가 `.baton/`에 놓이며
+`<baton> guide pause`로도 출력됩니다.
 
 `pause`는 되돌릴 수 있고, 아무것도 지우지 않습니다. 규칙 블록이 "Baton은
 중지됨"으로 바뀔 뿐이라, 에이전트는 지시 파일을 읽고 Baton이 설치되지 않은
