@@ -80,3 +80,5 @@
 2026-09-20T18:52:58 | nwuw | RUN_DONE | Director | Work classes are Relay and Solo
 2026-09-20T18:55:18 | ttuw | REQUEST  | Director | Sync the Korean guide with pause, remove, and the class names
 2026-09-20T18:56:53 | ttuw | RUN_DONE | Director | Guide covers pause, remove, and the class names
+2026-09-20T18:57:19 | dqci | REQUEST  | Director | Say what purge deletes and stop a message reaching a project that never had Baton
+2026-09-20T18:58:50 | dqci | RUN_DONE | Director | Messages state only what the tool can know

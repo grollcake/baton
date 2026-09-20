@@ -252,8 +252,10 @@ func (a *App) pausedUpdateMessage() string {
 		`Run "baton resume", update, then "baton pause" again.`
 }
 
-// removedUpdateMessage reports the refusal update --apply must give in a
-// removed project (Decision 6): MergeAgentBlock appends a block when it finds
+// removedUpdateMessage reports the refusal update --apply must give when no
+// instruction file carries a block, which is a removed project or one that
+// never had Baton; the tool cannot tell them apart, so the message does not
+// claim to (Decision 6): MergeAgentBlock appends a block when it finds
 // none, so an unguarded update --apply would silently reinstall Baton.
 // merge-agent-block is deliberately not gated by this message -- it is the
 // install primitive bootstrap and HOW-TO-UPDATE.md step 7 depend on, and it
@@ -263,8 +265,8 @@ func (a *App) removedUpdateMessage() string {
 	if err != nil || status != blockAbsent {
 		return ""
 	}
-	return "Baton has been removed from this project; update would restore the rules block.\n" +
-		"Re-install it with bootstrap if you want Baton back."
+	return "no <baton-rules> block is present in this project; update would add one.\n" +
+		"If Baton was removed, re-install it with bootstrap. If it was never installed here, bootstrap is the way in."
 }
 
 // refusePausedForUpdate refuses runMergeAgentBlock while paused, with the
