@@ -16,10 +16,30 @@ func MergeAgentBlock(target, source string) error {
 	if len(sourceBlock) == 0 {
 		return errors.New("source missing <baton-rules> block")
 	}
+	return replaceBlock(target, sourceBlock)
+}
 
+// replaceBlock splices block over target's existing <baton-rules> block, or
+// appends it when target carries none, preserving target's file mode (or
+// 0o644 for a target that does not yet exist). It is the write half
+// MergeAgentBlock has always performed; pause and resume (Decision 2) reuse
+// the same splice logic, through computeReplacedContent, to write the paused
+// and active block text without going through a second source file.
+func replaceBlock(target string, block []byte) error {
+	merged, mode, err := computeReplacedContent(target, block)
+	if err != nil {
+		return err
+	}
+	return atomicWrite(target, merged, mode)
+}
+
+// computeReplacedContent is replaceBlock's splice-or-append computation
+// without the write, so a caller that must write several files can compute
+// every new file's bytes first (Decision 7) before writing any of them.
+func computeReplacedContent(target string, block []byte) ([]byte, os.FileMode, error) {
 	targetContent, err := os.ReadFile(target)
 	if err != nil && !os.IsNotExist(err) {
-		return err
+		return nil, 0, err
 	}
 	mode := os.FileMode(0o644)
 	if info, statErr := os.Stat(target); statErr == nil {
@@ -29,7 +49,7 @@ func MergeAgentBlock(target, source string) error {
 	var merged []byte
 	if location != nil {
 		merged = append(merged, targetContent[:location[0]]...)
-		merged = append(merged, sourceBlock...)
+		merged = append(merged, block...)
 		merged = append(merged, targetContent[location[1]:]...)
 	} else {
 		merged = append(merged, targetContent...)
@@ -39,10 +59,10 @@ func MergeAgentBlock(target, source string) error {
 			}
 			merged = append(merged, '\n')
 		}
-		merged = append(merged, sourceBlock...)
+		merged = append(merged, block...)
 		merged = append(merged, '\n')
 	}
-	return atomicWrite(target, merged, mode)
+	return merged, mode, nil
 }
 
 func (a *App) runMergeAgentBlock(args []string) error {
@@ -55,6 +75,9 @@ func (a *App) runMergeAgentBlock(args []string) error {
 	}
 	source, err := filepath.Abs(args[1])
 	if err != nil {
+		return err
+	}
+	if err := a.refusePausedForUpdate(); err != nil {
 		return err
 	}
 	if err := MergeAgentBlock(target, source); err != nil {

@@ -84,6 +84,21 @@ func Discover() (*App, error) {
 	return nil, errors.New("cannot locate .baton; run from a project or set BATON_DIR")
 }
 
+// refusesWhilePaused lists the commands App.Run refuses, before they run and
+// writing nothing, while the project is paused (Decision 3). "update" and
+// "merge-agent-block" are deliberately absent: each checks for itself, after
+// parsing its own flags, so update's dry run stays allowed and both can use
+// the more specific update-trap message (Decision 4a).
+var refusesWhilePaused = map[string]bool{
+	"append":          true,
+	"new-round":       true,
+	"feedback":        true,
+	"gate":            true,
+	"subagent-prompt": true,
+	"prompt":          true,
+	"await":           true,
+}
+
 func (a *App) Run(args []string) error {
 	if len(args) == 0 {
 		a.usage()
@@ -92,7 +107,16 @@ func (a *App) Run(args []string) error {
 
 	command := args[0]
 	args = args[1:]
+	if refusesWhilePaused[command] {
+		if err := a.refuseIfPaused(); err != nil {
+			return err
+		}
+	}
 	switch command {
+	case "pause":
+		return a.runPause(args)
+	case "resume":
+		return a.runResume(args)
 	case "append":
 		return a.runAppend(args)
 	case "gate":
@@ -154,6 +178,8 @@ Configure and maintain:
   merge-agent-block <target-file> <source-file>
   update --upstream <baton-repo> [--apply]
   version
+  pause [--force]
+  resume
 `)
 }
 

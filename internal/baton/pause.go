@@ -1,0 +1,333 @@
+package baton
+
+import (
+	"bytes"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	docs "github.com/grollcake/baton"
+)
+
+// pausedBlock is the paused-state <baton-rules> block (Decision 2), the only
+// other text lint and blockState ever classify a project's instruction
+// blocks against. It is a Go constant, not a bootstrap/ file, because the
+// binary is the only thing that ever writes it.
+const pausedBlock = "<baton-rules>\n\n## Baton\n\n" +
+	"Baton is installed in this project and is paused. Do not follow\n" +
+	"`.baton/PROTOCOL.md`, do not run a `baton` command, and do not write under\n" +
+	"`.baton/`: work as if Baton were not installed. `.baton/` holds this project's\n" +
+	"records; leave every file in it unchanged. Resume only when the user asks for\n" +
+	"it, with `.baton/bin/baton resume`.\n\n" +
+	"</baton-rules>"
+
+// blockStatus classifies the <baton-rules> block(s) a project's instruction
+// files carry.
+type blockStatus string
+
+const (
+	blockActive  blockStatus = "active"
+	blockPaused  blockStatus = "paused"
+	blockAbsent  blockStatus = "absent"
+	blockUnknown blockStatus = "unknown"
+)
+
+// classifyBlock reports whether block matches the active block this binary
+// ships (bootstrap/AGENTS.md) or the paused block (Decision 2), or neither.
+func classifyBlock(block []byte) (blockStatus, error) {
+	active, err := docs.ActiveBlock()
+	if err != nil {
+		return blockUnknown, err
+	}
+	switch {
+	case bytes.Equal(block, active):
+		return blockActive, nil
+	case bytes.Equal(block, []byte(pausedBlock)):
+		return blockPaused, nil
+	default:
+		return blockUnknown, nil
+	}
+}
+
+// instructionFiles lists the instruction files present in the project, in a
+// stable order (AGENTS.md, then CLAUDE.md).
+func (a *App) instructionFiles() []string {
+	var files []string
+	for _, name := range []string{"AGENTS.md", "CLAUDE.md"} {
+		path := filepath.Join(a.ProjectDir, name)
+		if info, err := os.Stat(path); err == nil && !info.IsDir() {
+			files = append(files, path)
+		}
+	}
+	return files
+}
+
+// projectBlockState reads whichever of AGENTS.md and CLAUDE.md are present,
+// requires their blocks to match only when both exist (Decision 6, gap A),
+// and classifies the result. It errors, rather than picking a side, when a
+// present file carries no block or two present blocks differ -- both are
+// states pause and resume must refuse over, not silently resolve.
+func (a *App) projectBlockState() (blockStatus, error) {
+	agentsPath := filepath.Join(a.ProjectDir, "AGENTS.md")
+	claudePath := filepath.Join(a.ProjectDir, "CLAUDE.md")
+	agents, agentsErr := os.ReadFile(agentsPath)
+	claude, claudeErr := os.ReadFile(claudePath)
+	haveAgents := agentsErr == nil
+	haveClaude := claudeErr == nil
+
+	var agentsBlock, claudeBlock []byte
+	if haveAgents {
+		agentsBlock = batonBlockPattern.Find(agents)
+		if len(agentsBlock) == 0 {
+			return blockUnknown, errors.New("AGENTS.md missing <baton-rules> block")
+		}
+	}
+	if haveClaude {
+		claudeBlock = batonBlockPattern.Find(claude)
+		if len(claudeBlock) == 0 {
+			return blockUnknown, errors.New("CLAUDE.md missing <baton-rules> block")
+		}
+	}
+	switch {
+	case !haveAgents && !haveClaude:
+		return blockAbsent, nil
+	case haveAgents && haveClaude:
+		if !bytes.Equal(agentsBlock, claudeBlock) {
+			return blockUnknown, errors.New("AGENTS.md and CLAUDE.md Baton blocks differ")
+		}
+		return classifyBlock(agentsBlock)
+	case haveAgents:
+		return classifyBlock(agentsBlock)
+	default:
+		return classifyBlock(claudeBlock)
+	}
+}
+
+// writeInstructionBlocks writes block to every path in files. Every file's
+// new content is computed in memory first; the files are then written in
+// sequence, and if a write after the first fails, every already-written file
+// is restored to its original bytes (Decision 7). This is what keeps "the two
+// instruction files disagree" unreachable through a partial pause or resume:
+// either every file ends up holding block, or every file is back to what it
+// held before this call ran.
+func writeInstructionBlocks(files []string, block []byte) error {
+	type planned struct {
+		path     string
+		original []byte
+		hadFile  bool
+		mode     os.FileMode
+		content  []byte
+	}
+	plan := make([]planned, 0, len(files))
+	for _, path := range files {
+		original, err := os.ReadFile(path)
+		hadFile := err == nil
+		if err != nil && !hadFile && !os.IsNotExist(err) {
+			return err
+		}
+		content, mode, err := computeReplacedContent(path, block)
+		if err != nil {
+			return err
+		}
+		plan = append(plan, planned{path: path, original: original, hadFile: hadFile, mode: mode, content: content})
+	}
+	written := make([]planned, 0, len(plan))
+	for _, item := range plan {
+		if err := atomicWrite(item.path, item.content, item.mode); err != nil {
+			for _, done := range written {
+				if done.hadFile {
+					_ = atomicWrite(done.path, done.original, done.mode)
+				}
+			}
+			return err
+		}
+		written = append(written, item)
+	}
+	return nil
+}
+
+// openTask is the information reportOpenTasks (status --open) and pause and
+// resume each display about a task the timeline leaves open.
+type openTask struct {
+	id        string
+	lastEvent string
+	summary   string
+}
+
+// openTaskList reports every task whose timeline has not reached CLOSE or
+// RUN_DONE, in the order their REQUEST first appeared. reportOpenTasks and
+// runPause/runResume share this so open-task detection has one
+// implementation (Decision 5).
+func openTaskList(records []Record) []openTask {
+	closed := map[string]bool{}
+	var order []string
+	for _, record := range records {
+		if record.Event == eventRequest {
+			order = append(order, record.TaskID)
+		}
+		if record.Event == eventClose || record.Event == eventRunDone {
+			closed[record.TaskID] = true
+		}
+	}
+	var open []openTask
+	for _, taskID := range order {
+		if closed[taskID] {
+			continue
+		}
+		request, _ := lastRecord(records, taskID, eventRequest)
+		open = append(open, openTask{id: taskID, lastEvent: lastEvent(records, taskID), summary: request.Summary})
+	}
+	return open
+}
+
+// pausedUpdateMessage reports the update-trap refusal (Decision 4a) when the
+// project is paused, and "" otherwise. runUpdate and runMergeAgentBlock share
+// it so update --apply and merge-agent-block refuse with the same message,
+// and update's dry run can print it without treating it as a failure.
+func (a *App) pausedUpdateMessage() string {
+	status, _ := a.projectBlockState()
+	if status != blockPaused {
+		return ""
+	}
+	return "baton is paused in this project; update would restore the active rules block.\n" +
+		`Run "baton resume", update, then "baton pause" again.`
+}
+
+// refusePausedForUpdate refuses runMergeAgentBlock while paused, with the
+// same update-trap message runUpdate uses, so a manual update following
+// HOW-TO-UPDATE.md step 7 cannot un-pause the project either.
+func (a *App) refusePausedForUpdate() error {
+	if message := a.pausedUpdateMessage(); message != "" {
+		return errors.New(message)
+	}
+	return nil
+}
+
+// refuseIfPaused is the gate App.Run's dispatch applies, once, to every
+// command in the plan's refuse list (Decision 3) other than update and
+// merge-agent-block, which carry their own more specific refusal (Decision
+// 4a). It only refuses a confirmed pause; a drifted or absent block is left
+// to lint and to pause/resume's own refusals to report.
+func (a *App) refuseIfPaused() error {
+	status, _ := a.projectBlockState()
+	if status != blockPaused {
+		return nil
+	}
+	return errors.New(`baton is paused in this project; run "baton resume" first (records under .baton/ are unchanged)`)
+}
+
+func (a *App) runPause(args []string) error {
+	parsed, err := parseArguments(args, nil, map[string]bool{"--force": true})
+	if err != nil {
+		return err
+	}
+	if len(parsed.pos) != 0 {
+		return errors.New("pause accepts flags only")
+	}
+	status, err := a.projectBlockState()
+	if err != nil {
+		return fmt.Errorf("cannot pause: %w", err)
+	}
+	switch status {
+	case blockPaused:
+		fmt.Fprintln(a.Stdout, "Baton is already paused in this project")
+		return nil
+	case blockAbsent:
+		return errors.New("cannot pause: no instruction file carries a <baton-rules> block")
+	case blockUnknown:
+		return errors.New("cannot pause: Baton block matches neither the active nor the paused block this binary ships; run an update or restore it before pausing")
+	}
+
+	records, err := a.readRecords()
+	if err != nil {
+		return err
+	}
+	open := openTaskList(records)
+	if len(open) > 0 && !parsed.flags["--force"] {
+		for _, task := range open {
+			fmt.Fprintf(a.Stderr, "open_task: %s | last_event: %s | %s\n", task.id, task.lastEvent, task.summary)
+		}
+		return fmt.Errorf("cannot pause: %d open task(s); close them or re-run with --force", len(open))
+	}
+
+	if err := writeInstructionBlocks(a.instructionFiles(), []byte(pausedBlock)); err != nil {
+		return err
+	}
+
+	summary := "Baton paused"
+	if len(open) > 0 {
+		ids := make([]string, len(open))
+		for i, task := range open {
+			ids[i] = task.id
+		}
+		summary = fmt.Sprintf("Baton paused with %d open task: %s", len(open), strings.Join(ids, ", "))
+	}
+	taskID, err := a.generateTaskID(records)
+	if err != nil {
+		return err
+	}
+	now := a.Now().Format("2006-01-02T15:04:05")
+	if _, err := a.appendRecord(Record{Timestamp: now, TaskID: taskID, Event: eventRequest, Role: "Director", Summary: "Pause Baton"}); err != nil {
+		return err
+	}
+	if _, err := a.appendRecord(Record{Timestamp: now, TaskID: taskID, Event: eventRunDone, Role: "Director", Summary: summary}); err != nil {
+		return err
+	}
+	fmt.Fprintln(a.Stdout, summary)
+	return nil
+}
+
+func (a *App) runResume(args []string) error {
+	parsed, err := parseArguments(args, nil, nil)
+	if err != nil {
+		return err
+	}
+	if len(parsed.pos) != 0 {
+		return errors.New("resume accepts no arguments")
+	}
+	status, err := a.projectBlockState()
+	if err != nil {
+		return fmt.Errorf("cannot resume: %w", err)
+	}
+	switch status {
+	case blockActive:
+		fmt.Fprintln(a.Stdout, "Baton is already active in this project")
+		return nil
+	case blockAbsent:
+		return errors.New("cannot resume: no instruction file carries a <baton-rules> block")
+	case blockUnknown:
+		return errors.New("cannot resume: Baton block is not the paused block; it may have been edited while paused")
+	}
+
+	active, err := docs.ActiveBlock()
+	if err != nil {
+		return err
+	}
+	if err := writeInstructionBlocks(a.instructionFiles(), active); err != nil {
+		return err
+	}
+
+	records, err := a.readRecords()
+	if err != nil {
+		return err
+	}
+	taskID, err := a.generateTaskID(records)
+	if err != nil {
+		return err
+	}
+	now := a.Now().Format("2006-01-02T15:04:05")
+	if _, err := a.appendRecord(Record{Timestamp: now, TaskID: taskID, Event: eventRequest, Role: "Director", Summary: "Resume Baton"}); err != nil {
+		return err
+	}
+	if _, err := a.appendRecord(Record{Timestamp: now, TaskID: taskID, Event: eventRunDone, Role: "Director", Summary: "Baton resumed"}); err != nil {
+		return err
+	}
+
+	for _, task := range openTaskList(records) {
+		fmt.Fprintf(a.Stdout, "open_task: %s | last_event: %s | %s\n", task.id, task.lastEvent, task.summary)
+	}
+	fmt.Fprintln(a.Stdout, `Baton resumed; run "baton status" for open work`)
+	return nil
+}

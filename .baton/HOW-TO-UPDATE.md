@@ -5,6 +5,9 @@ that already has `.baton/`.
 
 ## Steps
 
+0. If the project is paused, run `<baton> resume` first, update, then
+   `<baton> pause` again. `update` and `merge-agent-block` both refuse while
+   paused.
 1. Read `.baton/VERSION`; stop and report if it is missing.
 2. Fetch or copy the latest upstream `main` from `https://github.com/grollcake/baton` into a temporary location.
 3. Select and checksum-verify the current platform binary under upstream `bootstrap/.baton/bin/<os>-<arch>/`.

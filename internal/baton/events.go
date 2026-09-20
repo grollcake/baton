@@ -633,28 +633,14 @@ func validateRunRound(records []Record, taskID, path string) error {
 
 // reportOpenTasks lists every task the log left open, so a Director that
 // started more than one, or inherited work from an earlier session, sees all of
-// them instead of only the task status picks.
+// them instead of only the task status picks. Open-task detection itself is
+// openTaskList (pause.go), shared with runPause and runResume (Decision 5).
 func (a *App) reportOpenTasks(records []Record) error {
-	closed := map[string]bool{}
-	var order []string
-	for _, record := range records {
-		if record.Event == eventRequest {
-			order = append(order, record.TaskID)
-		}
-		if record.Event == eventClose || record.Event == eventRunDone {
-			closed[record.TaskID] = true
-		}
+	open := openTaskList(records)
+	for _, task := range open {
+		fmt.Fprintf(a.Stdout, "open_task: %s | last_event: %s | %s\n", task.id, task.lastEvent, task.summary)
 	}
-	open := 0
-	for _, taskID := range order {
-		if closed[taskID] {
-			continue
-		}
-		open++
-		request, _ := lastRecord(records, taskID, eventRequest)
-		fmt.Fprintf(a.Stdout, "open_task: %s | last_event: %s | %s\n", taskID, lastEvent(records, taskID), request.Summary)
-	}
-	fmt.Fprintf(a.Stdout, "open_tasks: %d\n", open)
+	fmt.Fprintf(a.Stdout, "open_tasks: %d\n", len(open))
 	return nil
 }
 
