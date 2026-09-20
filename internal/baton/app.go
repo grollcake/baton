@@ -90,13 +90,12 @@ func Discover() (*App, error) {
 // parsing its own flags, so update's dry run stays allowed and both can use
 // the more specific update-trap message (Decision 4a).
 var refusesWhilePaused = map[string]bool{
-	"append":          true,
-	"new-round":       true,
-	"feedback":        true,
-	"gate":            true,
-	"subagent-prompt": true,
-	"prompt":          true,
-	"await":           true,
+	"append":    true,
+	"new-round": true,
+	"feedback":  true,
+	"gate":      true,
+	"prompt":    true,
+	"await":     true,
 }
 
 func (a *App) Run(args []string) error {
@@ -127,7 +126,7 @@ func (a *App) Run(args []string) error {
 		return a.runFeedback(args)
 	case "status":
 		return a.runStatus(args)
-	case "subagent-prompt", "prompt":
+	case "prompt":
 		return a.runPrompt(args)
 	case "models":
 		return a.runModels(args)

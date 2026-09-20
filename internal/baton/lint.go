@@ -53,10 +53,6 @@ func (state *lintState) requireTimeline() {
 		state.err("%s", err)
 		return
 	}
-	if filepath.Base(path) == legacyTimelineFile {
-		state.ok("%s exists (legacy name; the next append renames it to %s)", path, timelineFile)
-		return
-	}
 	state.ok("%s exists", path)
 }
 
@@ -204,7 +200,6 @@ func (state *lintState) checkLog() {
 	pendingRounds := map[string]string{}
 	pendingKeys := map[string]string{}
 	reviewResults := map[string]reviewOutcome{}
-	legacyLines := 0
 
 	scanner := bufio.NewScanner(file)
 	for lineNumber := 1; scanner.Scan(); lineNumber++ {
@@ -214,10 +209,6 @@ func (state *lintState) checkLog() {
 		}
 		record, parseErr := parseRecord(line, lineNumber)
 		if parseErr != nil {
-			if isLegacyRecordLine(line) {
-				legacyLines++
-				continue
-			}
 			state.err("%s", parseErr)
 			continue
 		}
@@ -246,7 +237,7 @@ func (state *lintState) checkLog() {
 		if record.Path != "" {
 			switch {
 			case requiresArtifact:
-				if artifactErr := state.app.checkArtifact(record.Event, record.Path, record.TaskID, true, state.removed); artifactErr != nil {
+				if artifactErr := state.app.checkArtifact(record.Event, record.Path, record.TaskID, state.removed); artifactErr != nil {
 					state.err("Baton log line %d: %s", lineNumber, artifactErr)
 				}
 			case record.Event == eventRequest:
@@ -323,9 +314,6 @@ func (state *lintState) checkLog() {
 	if err := scanner.Err(); err != nil {
 		state.err("cannot read %s: %s", logPath, err)
 	}
-	if legacyLines > 0 {
-		state.ok("legacy Baton log lines preserved: %d", legacyLines)
-	}
 
 	closedCount := 0
 	for _, event := range lastEvents {
@@ -372,7 +360,7 @@ func (a *App) reviewResult(path string) (reviewOutcome, error) {
 // installed machinery -- the managed documents, VERSION, the binary, its
 // executable bit, its checksum, bin/, and templates/ -- and keeps every
 // check that concerns the record itself: GUIDANCE.md, LESSON-LEARNED.md,
-// runs/, lesson-learned/, the timeline, the legacy scripts/protocol-guard
+// runs/, lesson-learned/, the timeline
 // checks, both Git-tracking checks over the kept subset of
 // requiredTrackedPaths, and checkLog.
 func (a *App) Lint() error {
@@ -411,16 +399,6 @@ func (a *App) Lint() error {
 		} else {
 			state.ok("baton binary checksum matches")
 		}
-	}
-	if _, err := os.Stat(a.batonPath("scripts")); os.IsNotExist(err) {
-		state.ok("legacy scripts directory absent")
-	} else {
-		state.err("legacy scripts directory must be removed")
-	}
-	if _, err := os.Stat(a.batonPath("protocol-guard")); os.IsNotExist(err) {
-		state.ok("legacy protocol-guard absent")
-	} else {
-		state.err("legacy protocol-guard must be removed")
 	}
 	state.checkAgentBlocks()
 	if !removed {

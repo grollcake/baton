@@ -392,8 +392,6 @@ Baton에 합류할 때의 읽기 순서는 다음과 같습니다.
 9. 업데이트가 성공하면 `.baton/VERSION`을 최신 upstream의 `VERSION` 값으로 갱신합니다.
 10. Director는 `BATON-LOG.txt`에 `REQUEST → RUN_DONE`을 추가합니다. 메타 작업이라 기록을 생략하지 않습니다. 보통 `Solo`이며, `summary`에 이전·이후 `VERSION`을 포함합니다. 범위가 `Relay`에 해당하면 전용 작업 브랜치에서 `REQUEST → PLANNED → EXECUTED → REVIEW → CLOSE`을 기록하고, 승인 후 자동 병합합니다.
 
-이전 버전의 `BATON-LOG.txt`가 `agent=`, `task=`, `TASK_BEGIN` 같은 형식을 사용하더라도 기존 줄은 수정하지 않습니다. 새 버전 적용 후 추가하는 이벤트부터 새 형식을 사용합니다.
-
 `AGENTS.md`의 Baton 블록 안에 프로젝트 고유 지시가 섞여 있어 자동 분리가 어렵다면 파일을 바꾸지 않고 충돌로 보고합니다.
 
 ## 16. 중지와 제거

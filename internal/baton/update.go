@@ -49,11 +49,6 @@ func (a *App) preflightUpdate(upstream string) error {
 	if err := verifyChecksum(a.upstreamBinary(upstream), checksumFile, a.upstreamBinaryRelative()); err != nil {
 		return fmt.Errorf("invalid upstream binary: %w", err)
 	}
-	if _, currentErr := os.Stat(a.batonPath(timelineFile)); currentErr == nil {
-		if _, legacyErr := os.Stat(a.batonPath(legacyTimelineFile)); legacyErr == nil {
-			return a.bothTimelinesError()
-		}
-	}
 	if runtime.GOOS == "windows" {
 		if executable, err := os.Executable(); err == nil && samePath(executable, a.installedBinaryPath()) {
 			return errors.New("Windows update must be run with the new upstream baton.exe from a temporary path")
@@ -134,14 +129,6 @@ Preserved:
 		return err
 	}
 
-	migrated, err := a.migrateTimeline()
-	if err != nil {
-		return err
-	}
-	if migrated {
-		fmt.Fprintf(a.Stdout, "Migrated %s -> %s\n", a.batonPath(legacyTimelineFile), a.batonPath(timelineFile))
-	}
-
 	upstreamBaton := filepath.Join(upstream, "bootstrap", ".baton")
 	agentsPath := filepath.Join(a.ProjectDir, "AGENTS.md")
 	if _, err := os.Stat(agentsPath); os.IsNotExist(err) {
@@ -181,9 +168,6 @@ Preserved:
 		return err
 	}
 	if err := copyFile(filepath.Join(upstream, "VERSION"), a.batonPath("VERSION"), 0o644); err != nil {
-		return err
-	}
-	if err := os.RemoveAll(a.batonPath("scripts")); err != nil {
 		return err
 	}
 

@@ -216,7 +216,7 @@ var refusingCommandsForTest = [][]string{
 	{"feedback", "--task-id", "boot", "--summary", "x"},
 	{"gate", "before-execute", "--task-id", "boot"},
 	{"prompt", "plan", "--task-id", "boot", "--key", "20260711-1000-test"},
-	{"subagent-prompt", "plan", "--task-id", "boot", "--key", "20260711-1000-test"},
+	{"prompt", "plan", "--task-id", "boot", "--key", "20260711-1000-test"},
 	{"await", "RUN_DONE", ".baton/runs/x.md"},
 }
 
