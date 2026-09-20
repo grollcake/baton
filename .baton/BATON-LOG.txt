@@ -43,3 +43,6 @@
 2026-09-19T22:35:13 | lutg | RUN_DONE | Director | Review method stated in PLANNER.md
 2026-09-20T15:31:16 | nnah | REQUEST  | Director | Rename baton.log to TIMELINE.txt so gitignore cannot swallow it | .baton/runs/20260920-1531-timeline-rename-PLAN.md
 2026-09-20T15:37:53 | nnah | PLANNED  | Planner  | Rename baton.log to BATON-LOG.txt (name changed after REQUEST) | .baton/runs/20260920-1531-timeline-rename-PLAN.md
+2026-09-20T15:48:03 | nnah | EXECUTED | Executor | Rename to BATON-LOG.txt with fallback and per-path ignore check | .baton/runs/20260920-1531-timeline-rename-RUN-01.md
+2026-09-20T15:56:46 | nnah | REVIEW   | Planner  | Review round 01 | .baton/runs/20260920-1531-timeline-rename-REVIEW-01.md
+2026-09-20T15:59:00 | nnah | CLOSE    | Director | Rename the timeline to BATON-LOG.txt and migrate on first append | .baton/runs/20260920-1531-timeline-rename-CLOSE.md
