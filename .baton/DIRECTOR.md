@@ -47,7 +47,7 @@ Claude Code subagent, not Director.
 Use local system time, four random lowercase letters for `task-id`, and only
 `REQUEST`, `PLANNED`, `EXECUTED`, `REVIEW`, `FEEDBACK`, `CLOSE`, `RUN_DONE`.
 Create one `task-id` per `REQUEST` and reuse it through `CLOSE`, including
-pre-approval `FEEDBACK`. Direct flow is `REQUEST -> RUN_DONE`; Standard flow is
+pre-approval `FEEDBACK`. Solo flow is `REQUEST -> RUN_DONE`; Relay flow is
 `REQUEST -> PLANNED -> EXECUTED -> REVIEW -> CLOSE`.
 
 For task branches, append `REQUEST` on the task branch; write no base-branch
@@ -70,9 +70,9 @@ RUN_DONE | Director
 complete `RUN-<NN>.md`. Each round `<NN>` is one `EXECUTED` followed by matching
 `REVIEW`; on `blocker`, append the next `EXECUTED` under the same `task-id`.
 
-## Standard Pipeline
+## Relay Pipeline
 
-1. Classify the request before appending a Standard task event.
+1. Classify the request before appending a Relay task event.
 2. Apply the session Git branch strategy, creating and switching to a task
    branch when required.
 3. Append `REQUEST`.
@@ -91,7 +91,7 @@ complete `RUN-<NN>.md`. Each round `<NN>` is one `EXECUTED` followed by matching
     limited acceptance, or stop. `FEEDBACK` is user input, so it restarts that
     count.
 
-For Standard work, user involvement is required only for final approval,
+For Relay work, user involvement is required only for final approval,
 pre-approval feedback, blockers after three rounds, or another Director-needed
 decision. Successful approval automatically merges a dedicated task branch
 without separate confirmation.
@@ -137,7 +137,7 @@ it does not forbid using one that arrives.
 
 When an `await` exit arrives while answering the user, finish that reply, then
 append the event, check the gate, and delegate the next stage before any other
-work. As a safety net for missed notices, while a Standard task is open run
+work. As a safety net for missed notices, while a Relay task is open run
 `<baton> status` once per user message; a `pending_artifact:` line names a
 complete artifact that is not appended yet, so process it the same way.
 

@@ -76,3 +76,5 @@
 2026-09-20T18:48:21 | kovh | CLOSE    | Director | Fold the lifecycle into the document that reaches a project | .baton/runs/20260920-1821-uninstall-reachable-CLOSE.md
 2026-09-20T18:48:54 | tcbx | REQUEST  | Director | Point the root pages where their reader can look
 2026-09-20T18:50:02 | tcbx | RUN_DONE | Director | Root pages point where their reader can look
+2026-09-20T18:51:53 | nwuw | REQUEST  | Director | Rename the work classes to Relay and Solo
+2026-09-20T18:52:58 | nwuw | RUN_DONE | Director | Work classes are Relay and Solo

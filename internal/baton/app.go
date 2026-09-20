@@ -159,7 +159,7 @@ func (a *App) Run(args []string) error {
 func (a *App) usage() {
 	fmt.Fprint(a.Stdout, `Usage: baton <command> [flags]
 
-Start Standard work:
+Start Relay work:
   new-round <slug> --summary <text> [--branch <name>]
 
 Delegate a stage:

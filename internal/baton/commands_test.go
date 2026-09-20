@@ -173,8 +173,8 @@ func TestTransitionMatrixAndAllowedFlows(t *testing.T) {
 		"2026-07-11T10:00:00 | boot | REQUEST  | Director | Bootstrap Baton",
 		"2026-07-11T10:00:00 | boot | RUN_DONE | Director | Baton initialized",
 	)
-	harness.run(t, "append", eventRequest, "--task-id", "drct", "--role", "Director", "--summary", "Direct flow")
-	harness.run(t, "append", eventRunDone, "--task-id", "drct", "--role", "Director", "--summary", "Direct flow complete")
+	harness.run(t, "append", eventRequest, "--task-id", "drct", "--role", "Director", "--summary", "Solo flow")
+	harness.run(t, "append", eventRunDone, "--task-id", "drct", "--role", "Director", "--summary", "Solo flow complete")
 
 	taskID, key := parseRoundOutput(t, harness.run(t, "new-round", "retry-flow", "--summary", "Retry flow"))
 	planPath := ".baton/runs/" + key + "-PLAN.md"

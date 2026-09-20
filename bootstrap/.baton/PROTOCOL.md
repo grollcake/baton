@@ -48,10 +48,14 @@ own scope instead of relying on an earlier role.
 
 ## Work Classes
 
+The names say whether the work is handed on. `Solo` work stays with Director
+from start to finish. `Relay` work is passed to Planner and Executor and back,
+however many rounds that takes, which is what Baton is named for.
+
 - Excluded from records: simple Q&A, short explanation, or brainstorming.
-- `Direct`: minor localized edit, Baton bootstrap, or Baton update
+- `Solo`: minor localized edit, Baton bootstrap, or Baton update
   sync. Director handles it directly; no completion approval is required.
-- `Standard`: multi-file work, design judgment, or work needing verification.
+- `Relay`: multi-file work, design judgment, or work needing verification.
   Director coordinates Planner -> Executor -> Planner review, preferably in the
   background, while staying available to the user.
 
@@ -98,7 +102,7 @@ Director tells the user the risk before asking, not after.
 
 ## Approval And Feedback
 
-Only explicit user approval can close Standard work. Any user feedback after a
+Only explicit user approval can close Relay work. Any user feedback after a
 review is a normal pipeline step, not a reversal of completed work. Feedback
 opens the next round `RUN-<NN+1>`; Director never asks the user to choose
 between reusing a round and starting a new one.
@@ -117,8 +121,8 @@ five manual check cases for the user.
 
 ## User-Facing Reports
 
-Default to short user-facing reports. For `Direct` work, report outcome, changed
-scope, and validation in one to three sentences. For `Standard` approval
+Default to short user-facing reports. For `Solo` work, report outcome, changed
+scope, and validation in one to three sentences. For `Relay` approval
 requests, expose only outcome, validation status, actionable nits or risks,
 three to five user manual checks, and the `REVIEW` path.
 

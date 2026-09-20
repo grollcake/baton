@@ -662,7 +662,7 @@ func (a *App) reviewReadyForUser(records []Record, taskID string) bool {
 // nextCommand builds the delegation prompt command for the next step, so
 // Director runs it instead of recovering the round key from artifact names. It
 // stays empty at REQUEST when the REQUEST carries no path (an older record or
-// Direct work), and at REVIEW once the latest review is ready for the user's
+// Solo work), and at REVIEW once the latest review is ready for the user's
 // decision, where the next step is the user's approval rather than a
 // delegation.
 func (a *App) nextCommand(records []Record, taskID, last string) string {
