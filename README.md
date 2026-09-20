@@ -197,6 +197,7 @@ chmod +x .baton/bin/baton
 ## 더 읽기
 
 - [BOOTSTRAP.md](BOOTSTRAP.md) — 설치와 업데이트 절차
+- [UNINSTALL.md](UNINSTALL.md) — 중지와 제거 절차
 - [PROTOCOL-GUIDE.md](PROTOCOL-GUIDE.md) — 한국어 상세 가이드
 - [PROTOCOL.md](bootstrap/.baton/PROTOCOL.md) — 공통 규칙
 - [DIRECTOR.md](bootstrap/.baton/DIRECTOR.md), [PLANNER.md](bootstrap/.baton/PLANNER.md), [EXECUTOR.md](bootstrap/.baton/EXECUTOR.md) — 역할별 규칙

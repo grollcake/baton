@@ -65,3 +65,5 @@
 2026-09-20T17:57:06 | wbqt | EXECUTED | Executor | Report the whole blocking path in the purge refusal | .baton/runs/20260920-1653-remove-baton-RUN-02.md
 2026-09-20T18:00:47 | wbqt | REVIEW   | Planner  | Review round 02 | .baton/runs/20260920-1653-remove-baton-REVIEW-02.md
 2026-09-20T18:02:13 | wbqt | CLOSE    | Director | Add remove, keeping the records by default | .baton/runs/20260920-1653-remove-baton-CLOSE.md
+2026-09-20T18:05:24 | atns | REQUEST  | Director | Document removal for the agent that is asked to do it
+2026-09-20T18:06:48 | atns | RUN_DONE | Director | UNINSTALL.md covers what remove cannot
