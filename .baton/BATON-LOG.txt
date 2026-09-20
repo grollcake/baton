@@ -93,3 +93,5 @@
 2026-09-20T19:46:42 | cevu | RUN_DONE | Director | Every backward compatibility path is gone
 2026-09-20T20:11:19 | umtl | REQUEST  | Director | Make every close name its lesson candidates
 2026-09-20T20:13:13 | umtl | RUN_DONE | Director | Every close names its lesson candidates
+2026-09-20T20:16:23 | qxce | REQUEST  | Director | Put the day's lessons in the index
+2026-09-20T20:16:35 | qxce | RUN_DONE | Director | Six lessons recorded and indexed
