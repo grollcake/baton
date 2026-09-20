@@ -288,7 +288,7 @@ func (a *App) printRemoveDryRun(plan removePlan, open []openTask, purge bool, pu
 				fmt.Fprintf(a.Stdout, "  %s\n", path)
 			}
 		} else {
-			fmt.Fprintf(a.Stdout, "--purge would delete .baton/ in full; it is held at commit %s\n", purgeCommit)
+			fmt.Fprintf(a.Stdout, "--purge would delete .baton/ in full, including content Git ignores; tracked content is held at commit %s\n", purgeCommit)
 		}
 	} else {
 		fmt.Fprintln(a.Stdout, "Delete:")
