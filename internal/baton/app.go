@@ -143,6 +143,8 @@ func (a *App) Run(args []string) error {
 		return a.runMergeAgentBlock(args)
 	case "update":
 		return a.runUpdate(args)
+	case "remove":
+		return a.runRemove(args)
 	case "version":
 		return a.runVersion(args)
 	case "help", "-h", "--help":
@@ -180,6 +182,7 @@ Configure and maintain:
   version
   pause [--force]
   resume
+  remove [--apply] [--force] [--purge]
 `)
 }
 

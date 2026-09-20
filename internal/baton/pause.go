@@ -64,88 +64,145 @@ func (a *App) instructionFiles() []string {
 	return files
 }
 
-// projectBlockState reads whichever of AGENTS.md and CLAUDE.md are present,
-// requires their blocks to match only when both exist (Decision 6, gap A),
-// and classifies the result. It errors, rather than picking a side, when a
-// present file carries no block or two present blocks differ -- both are
-// states pause and resume must refuse over, not silently resolve.
+// classifyInstructionFile reports whether path is present and, if so, how its
+// <baton-rules> block classifies: blockActive, blockPaused, blockUnknown (a
+// present block matching neither shipped text), or blockAbsent (the file
+// exists but carries no block at all -- Decision 6). present is false only
+// when the file does not exist; a present file never returns an error here,
+// so the caller decides what to do with an absent or unknown block instead of
+// this function erroring on their behalf.
+func classifyInstructionFile(path string) (status blockStatus, present bool, err error) {
+	content, readErr := os.ReadFile(path)
+	if readErr != nil {
+		return blockAbsent, false, nil
+	}
+	block := batonBlockPattern.Find(content)
+	if len(block) == 0 {
+		return blockAbsent, true, nil
+	}
+	status, err = classifyBlock(block)
+	return status, true, err
+}
+
+// projectBlockState reads whichever of AGENTS.md and CLAUDE.md are present
+// and requires them to agree (Decision 6, gap A). blockAbsent now covers two
+// cases under one name: no instruction file exists, or every present
+// instruction file exists but carries no block at all (the state removal
+// produces). It errors, rather than picking a side, when one present file
+// carries a block and another does not, or when two present blocks differ --
+// both are states pause, resume, and remove must refuse over, not silently
+// resolve.
 func (a *App) projectBlockState() (blockStatus, error) {
 	agentsPath := filepath.Join(a.ProjectDir, "AGENTS.md")
 	claudePath := filepath.Join(a.ProjectDir, "CLAUDE.md")
-	agents, agentsErr := os.ReadFile(agentsPath)
-	claude, claudeErr := os.ReadFile(claudePath)
-	haveAgents := agentsErr == nil
-	haveClaude := claudeErr == nil
+	agentsStatus, haveAgents, err := classifyInstructionFile(agentsPath)
+	if err != nil {
+		return blockUnknown, err
+	}
+	claudeStatus, haveClaude, err := classifyInstructionFile(claudePath)
+	if err != nil {
+		return blockUnknown, err
+	}
 
-	var agentsBlock, claudeBlock []byte
-	if haveAgents {
-		agentsBlock = batonBlockPattern.Find(agents)
-		if len(agentsBlock) == 0 {
-			return blockUnknown, errors.New("AGENTS.md missing <baton-rules> block")
-		}
-	}
-	if haveClaude {
-		claudeBlock = batonBlockPattern.Find(claude)
-		if len(claudeBlock) == 0 {
-			return blockUnknown, errors.New("CLAUDE.md missing <baton-rules> block")
-		}
-	}
 	switch {
 	case !haveAgents && !haveClaude:
 		return blockAbsent, nil
 	case haveAgents && haveClaude:
-		if !bytes.Equal(agentsBlock, claudeBlock) {
-			return blockUnknown, errors.New("AGENTS.md and CLAUDE.md Baton blocks differ")
+		if agentsStatus != claudeStatus {
+			switch {
+			case agentsStatus == blockAbsent:
+				return blockUnknown, errors.New("CLAUDE.md carries a Baton block and AGENTS.md does not")
+			case claudeStatus == blockAbsent:
+				return blockUnknown, errors.New("AGENTS.md carries a Baton block and CLAUDE.md does not")
+			default:
+				return blockUnknown, errors.New("AGENTS.md and CLAUDE.md Baton blocks differ")
+			}
 		}
-		return classifyBlock(agentsBlock)
+		return agentsStatus, nil
 	case haveAgents:
-		return classifyBlock(agentsBlock)
+		return agentsStatus, nil
 	default:
-		return classifyBlock(claudeBlock)
+		return claudeStatus, nil
 	}
 }
 
-// writeInstructionBlocks writes block to every path in files. Every file's
-// new content is computed in memory first; the files are then written in
-// sequence, and if a write after the first fails, every already-written file
-// is restored to its original bytes (Decision 7). This is what keeps "the two
-// instruction files disagree" unreachable through a partial pause or resume:
-// either every file ends up holding block, or every file is back to what it
-// held before this call ran.
-func writeInstructionBlocks(files []string, block []byte) error {
+// writeInstructionBlocks writes plannedContent[i] to files[i]; a nil entry
+// deletes that file instead. Every file's original bytes are read first; the
+// writes then happen in sequence, and if one after the first fails, every
+// already-written file is restored to its original state (Decision 7) --
+// recreated from its original bytes if it had one, removed if this call
+// created it. This is what keeps "the two instruction files disagree"
+// unreachable through a partial pause, resume, or remove: either every file
+// ends up in its planned state, or every file is back to what it held before
+// this call ran.
+func writeInstructionBlocks(files []string, plannedContent [][]byte) error {
+	if len(files) != len(plannedContent) {
+		return fmt.Errorf("writeInstructionBlocks: %d files but %d planned contents", len(files), len(plannedContent))
+	}
 	type planned struct {
 		path     string
 		original []byte
 		hadFile  bool
 		mode     os.FileMode
 		content  []byte
+		delete   bool
 	}
 	plan := make([]planned, 0, len(files))
-	for _, path := range files {
+	for i, path := range files {
 		original, err := os.ReadFile(path)
 		hadFile := err == nil
 		if err != nil && !hadFile && !os.IsNotExist(err) {
 			return err
 		}
-		content, mode, err := computeReplacedContent(path, block)
-		if err != nil {
-			return err
+		mode := os.FileMode(0o644)
+		if info, statErr := os.Stat(path); statErr == nil {
+			mode = info.Mode().Perm()
+		}
+		content := plannedContent[i]
+		if content == nil {
+			plan = append(plan, planned{path: path, original: original, hadFile: hadFile, mode: mode, delete: true})
+			continue
 		}
 		plan = append(plan, planned{path: path, original: original, hadFile: hadFile, mode: mode, content: content})
 	}
 	written := make([]planned, 0, len(plan))
 	for _, item := range plan {
-		if err := atomicWrite(item.path, item.content, item.mode); err != nil {
+		var writeErr error
+		if item.delete {
+			writeErr = os.Remove(item.path)
+		} else {
+			writeErr = atomicWrite(item.path, item.content, item.mode)
+		}
+		if writeErr != nil {
 			for _, done := range written {
 				if done.hadFile {
 					_ = atomicWrite(done.path, done.original, done.mode)
+				} else {
+					_ = os.Remove(done.path)
 				}
 			}
-			return err
+			return writeErr
 		}
 		written = append(written, item)
 	}
 	return nil
+}
+
+// spliceBlockIntoFiles computes, for each path in files, that file's content
+// with block spliced over its existing <baton-rules> block (or appended, if
+// it has none) via computeReplacedContent -- the shared computation
+// writeInstructionBlocks needs one planned content per file, and pause and
+// resume both splice the same block into every file they touch.
+func spliceBlockIntoFiles(files []string, block []byte) ([][]byte, error) {
+	content := make([][]byte, len(files))
+	for i, path := range files {
+		merged, _, err := computeReplacedContent(path, block)
+		if err != nil {
+			return nil, err
+		}
+		content[i] = merged
+	}
+	return content, nil
 }
 
 // openTask is the information reportOpenTasks (status --open) and pause and
@@ -195,6 +252,21 @@ func (a *App) pausedUpdateMessage() string {
 		`Run "baton resume", update, then "baton pause" again.`
 }
 
+// removedUpdateMessage reports the refusal update --apply must give in a
+// removed project (Decision 6): MergeAgentBlock appends a block when it finds
+// none, so an unguarded update --apply would silently reinstall Baton.
+// merge-agent-block is deliberately not gated by this message -- it is the
+// install primitive bootstrap and HOW-TO-UPDATE.md step 7 depend on, and it
+// cannot tell "not installed yet" from "removed".
+func (a *App) removedUpdateMessage() string {
+	status, err := a.projectBlockState()
+	if err != nil || status != blockAbsent {
+		return ""
+	}
+	return "Baton has been removed from this project; update would restore the rules block.\n" +
+		"Re-install it with bootstrap if you want Baton back."
+}
+
 // refusePausedForUpdate refuses runMergeAgentBlock while paused, with the
 // same update-trap message runUpdate uses, so a manual update following
 // HOW-TO-UPDATE.md step 7 cannot un-pause the project either.
@@ -235,7 +307,7 @@ func (a *App) runPause(args []string) error {
 		fmt.Fprintln(a.Stdout, "Baton is already paused in this project")
 		return nil
 	case blockAbsent:
-		return errors.New("cannot pause: no instruction file carries a <baton-rules> block")
+		return errors.New("cannot pause: no instruction file carries a <baton-rules> block; Baton is not installed here")
 	case blockUnknown:
 		return errors.New("cannot pause: Baton block matches neither the active nor the paused block this binary ships; run an update or restore it before pausing")
 	}
@@ -252,7 +324,12 @@ func (a *App) runPause(args []string) error {
 		return fmt.Errorf("cannot pause: %d open task(s); close them or re-run with --force", len(open))
 	}
 
-	if err := writeInstructionBlocks(a.instructionFiles(), []byte(pausedBlock)); err != nil {
+	files := a.instructionFiles()
+	content, err := spliceBlockIntoFiles(files, []byte(pausedBlock))
+	if err != nil {
+		return err
+	}
+	if err := writeInstructionBlocks(files, content); err != nil {
 		return err
 	}
 
@@ -296,7 +373,7 @@ func (a *App) runResume(args []string) error {
 		fmt.Fprintln(a.Stdout, "Baton is already active in this project")
 		return nil
 	case blockAbsent:
-		return errors.New("cannot resume: no instruction file carries a <baton-rules> block")
+		return errors.New("cannot resume: no instruction file carries a <baton-rules> block; Baton was removed from this project -- re-install it with bootstrap to bring it back")
 	case blockUnknown:
 		return errors.New("cannot resume: Baton block is not the paused block; it may have been edited while paused")
 	}
@@ -305,7 +382,12 @@ func (a *App) runResume(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := writeInstructionBlocks(a.instructionFiles(), active); err != nil {
+	files := a.instructionFiles()
+	content, err := spliceBlockIntoFiles(files, active)
+	if err != nil {
+		return err
+	}
+	if err := writeInstructionBlocks(files, content); err != nil {
 		return err
 	}
 
