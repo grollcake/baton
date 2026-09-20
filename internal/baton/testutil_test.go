@@ -124,7 +124,7 @@ func writeLog(t *testing.T, batonDir string, lines ...string) {
 	if content != "" {
 		content += "\n"
 	}
-	if err := os.WriteFile(filepath.Join(batonDir, "baton.log"), []byte(content), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(batonDir, timelineFile), []byte(content), 0o644); err != nil {
 		t.Fatal(err)
 	}
 }

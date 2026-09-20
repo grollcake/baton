@@ -19,7 +19,7 @@ completion; Director detects completion from this line.
 
 As the last step before reporting completion, run `baton check-artifact
 EXECUTED .baton/runs/KEY-RUN-NN.md TASK-ID` on your own artifact. Lint is not a
-substitute: lint only inspects artifacts already recorded in `baton.log`, and
+substitute: lint only inspects artifacts already recorded in `BATON-LOG.txt`, and
 your artifact is not among them until Director appends it.
 
 ## User-Reported Defects

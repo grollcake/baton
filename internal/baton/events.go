@@ -12,6 +12,15 @@ import (
 	"strings"
 )
 
+// timelineFile is the current name of the append-only handoff record.
+// legacyTimelineFile is the name it carried before this rename; the binary
+// keeps reading it indefinitely (Decision 2) so no installed project can
+// reach a state where a Baton command starts from an empty timeline.
+const (
+	timelineFile       = "BATON-LOG.txt"
+	legacyTimelineFile = "baton.log"
+)
+
 const (
 	eventRequest  = "REQUEST"
 	eventPlanned  = "PLANNED"
@@ -70,8 +79,67 @@ func isLegacyRecordLine(line string) bool {
 		strings.Contains(line, "TASK_BEGIN") || strings.Contains(line, "TASK_END")
 }
 
+// timelinePath resolves the on-disk timeline file: BATON-LOG.txt when
+// present, else the legacy baton.log for read-only fallback (Decision 2). It
+// refuses when both are present, since the binary cannot know which is
+// authoritative and merging two append-only records is not a rename
+// (Decision 1's refusal case).
+func (a *App) timelinePath() (string, error) {
+	current := a.batonPath(timelineFile)
+	legacy := a.batonPath(legacyTimelineFile)
+	_, currentErr := os.Stat(current)
+	_, legacyErr := os.Stat(legacy)
+	switch {
+	case currentErr == nil && legacyErr == nil:
+		return "", a.bothTimelinesError()
+	case currentErr == nil:
+		return current, nil
+	case legacyErr == nil:
+		return legacy, nil
+	default:
+		return "", fmt.Errorf("missing timeline: %s (or legacy %s)", current, legacy)
+	}
+}
+
+func (a *App) bothTimelinesError() error {
+	return fmt.Errorf("both %s and %s exist; reconcile them into a single timeline before continuing", a.batonPath(timelineFile), a.batonPath(legacyTimelineFile))
+}
+
+// migrateTimeline renames the legacy baton.log to BATON-LOG.txt when only the
+// legacy name is present, so the write path (appendRecord) and update's apply
+// phase carry an active project's timeline forward under the new name before
+// they mutate .baton/ further. It reports whether a rename happened, refuses
+// when both names exist, and is a no-op when the current name already exists
+// or neither exists (the caller's own read or open then surfaces that
+// failure). os.Rename is atomic within a directory, so there is no
+// intermediate state in which the content exists in neither file or is split
+// across both.
+func (a *App) migrateTimeline() (bool, error) {
+	current := a.batonPath(timelineFile)
+	legacy := a.batonPath(legacyTimelineFile)
+	_, currentErr := os.Stat(current)
+	_, legacyErr := os.Stat(legacy)
+	switch {
+	case currentErr == nil && legacyErr == nil:
+		return false, a.bothTimelinesError()
+	case currentErr == nil:
+		return false, nil
+	case legacyErr == nil:
+		if err := os.Rename(legacy, current); err != nil {
+			return false, err
+		}
+		return true, nil
+	default:
+		return false, nil
+	}
+}
+
 func (a *App) readRecords() ([]Record, error) {
-	file, err := os.Open(a.batonPath("baton.log"))
+	path, err := a.timelinePath()
+	if err != nil {
+		return nil, err
+	}
+	file, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -151,7 +219,10 @@ func formatRecord(record Record) string {
 
 func (a *App) appendRecord(record Record) (string, error) {
 	line := formatRecord(record)
-	file, err := os.OpenFile(a.batonPath("baton.log"), os.O_APPEND|os.O_WRONLY, 0)
+	if _, err := a.migrateTimeline(); err != nil {
+		return "", err
+	}
+	file, err := os.OpenFile(a.batonPath(timelineFile), os.O_APPEND|os.O_WRONLY, 0)
 	if err != nil {
 		return "", err
 	}

@@ -74,11 +74,11 @@ func TestUpdatePreservesProjectState(t *testing.T) {
 		t.Fatal(err)
 	}
 	legacy := []byte("TASK_BEGIN agent=Director task=legacy\n")
-	currentLog := readFile(t, harness.app.batonPath("baton.log"))
-	if err := os.WriteFile(harness.app.batonPath("baton.log"), append(legacy, currentLog...), 0o644); err != nil {
+	currentLog := readFile(t, harness.app.batonPath(timelineFile))
+	if err := os.WriteFile(harness.app.batonPath(timelineFile), append(legacy, currentLog...), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	beforeLog := readFile(t, harness.app.batonPath("baton.log"))
+	beforeLog := readFile(t, harness.app.batonPath(timelineFile))
 	beforeLines := bytes.Count(beforeLog, []byte("\n"))
 
 	harness.run(t, "update", "--upstream", upstream, "--apply")
@@ -88,9 +88,9 @@ func TestUpdatePreservesProjectState(t *testing.T) {
 			t.Fatalf("%s changed during update", path)
 		}
 	}
-	afterLog := readFile(t, harness.app.batonPath("baton.log"))
+	afterLog := readFile(t, harness.app.batonPath(timelineFile))
 	if !bytes.HasPrefix(afterLog, beforeLog) {
-		t.Fatal("existing baton.log lines changed")
+		t.Fatal("existing timeline lines changed")
 	}
 	if lines := bytes.Count(afterLog, []byte("\n")); lines != beforeLines+2 {
 		t.Fatalf("update appended %d lines, want 2", lines-beforeLines)
@@ -111,13 +111,66 @@ func TestUpdatePreservesProjectState(t *testing.T) {
 func TestUpdateDryRunDoesNotMutate(t *testing.T) {
 	harness := newHarness(t)
 	upstream := newTestUpstream(t, harness.app)
-	before := readFile(t, harness.app.batonPath("baton.log"))
+	before := readFile(t, harness.app.batonPath(timelineFile))
 	output := harness.run(t, "update", "--upstream", upstream)
 	if !strings.Contains(output, "Dry run") {
 		t.Fatalf("unexpected dry-run output: %s", output)
 	}
-	if after := readFile(t, harness.app.batonPath("baton.log")); !bytes.Equal(before, after) {
-		t.Fatal("dry-run changed baton.log")
+	if after := readFile(t, harness.app.batonPath(timelineFile)); !bytes.Equal(before, after) {
+		t.Fatal("dry-run changed the timeline")
+	}
+}
+
+// TestUpdateMigratesLegacyTimeline covers Decision 1's third trigger site:
+// update --apply renames a legacy baton.log to BATON-LOG.txt as the first
+// mutation of the apply phase, before any managed document is copied, and
+// prints that it happened.
+func TestUpdateMigratesLegacyTimeline(t *testing.T) {
+	harness := newHarness(t)
+	upstream := newTestUpstream(t, harness.app)
+	before := readFile(t, harness.app.batonPath(timelineFile))
+	if err := os.Rename(harness.app.batonPath(timelineFile), harness.app.batonPath(legacyTimelineFile)); err != nil {
+		t.Fatal(err)
+	}
+	output := harness.run(t, "update", "--upstream", upstream, "--apply")
+	if !strings.Contains(output, "Migrated") {
+		t.Fatalf("update did not report the timeline migration: %s", output)
+	}
+	if _, err := os.Stat(harness.app.batonPath(legacyTimelineFile)); !os.IsNotExist(err) {
+		t.Fatal("legacy baton.log still present after update --apply")
+	}
+	after := readFile(t, harness.app.batonPath(timelineFile))
+	if !bytes.HasPrefix(after, before) {
+		t.Fatal("update --apply lost prior timeline lines while migrating")
+	}
+	harness.run(t, "lint")
+}
+
+// TestUpdateRefusesBothTimelineNames covers Decision 1's refusal case at the
+// update site: preflightUpdate rejects the update before any file is copied
+// when both timeline names are present, leaving both files and VERSION
+// untouched.
+func TestUpdateRefusesBothTimelineNames(t *testing.T) {
+	harness := newHarness(t)
+	upstream := newTestUpstream(t, harness.app)
+	content := readFile(t, harness.app.batonPath(timelineFile))
+	if err := os.WriteFile(harness.app.batonPath(legacyTimelineFile), content, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	beforeVersion := readFile(t, harness.app.batonPath("VERSION"))
+	beforeProtocol := readFile(t, harness.app.batonPath("PROTOCOL.md"))
+	err := harness.fail("update", "--upstream", upstream, "--apply")
+	if err == nil {
+		t.Fatal("update accepted both timeline names present")
+	}
+	if !strings.Contains(err.Error(), timelineFile) || !strings.Contains(err.Error(), legacyTimelineFile) {
+		t.Fatalf("update error does not name both paths: %v", err)
+	}
+	if after := readFile(t, harness.app.batonPath("VERSION")); !bytes.Equal(beforeVersion, after) {
+		t.Fatal("refused update changed VERSION")
+	}
+	if after := readFile(t, harness.app.batonPath("PROTOCOL.md")); !bytes.Equal(after, beforeProtocol) {
+		t.Fatal("refused update changed a managed document")
 	}
 }
 

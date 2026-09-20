@@ -261,15 +261,15 @@ func TestArtifactConsistency(t *testing.T) {
 	writeClose(t, harness.app.ProjectDir, closePath, taskID)
 	harness.run(t, "append", eventClose, "--task-id", taskID, "--role", "Director", "--summary", "Consistency flow closed", "--path", closePath)
 
-	cleanLog := readFile(t, harness.app.batonPath("baton.log"))
+	cleanLog := readFile(t, harness.app.batonPath(timelineFile))
 	log := strings.ReplaceAll(string(cleanLog), runPath, wrongRun)
-	if err := os.WriteFile(harness.app.batonPath("baton.log"), []byte(log), 0o644); err != nil {
+	if err := os.WriteFile(harness.app.batonPath(timelineFile), []byte(log), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := harness.fail("lint"); err == nil {
 		t.Fatal("lint accepted an artifact key mismatch")
 	}
-	if err := os.WriteFile(harness.app.batonPath("baton.log"), cleanLog, 0o644); err != nil {
+	if err := os.WriteFile(harness.app.batonPath(timelineFile), cleanLog, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	review := strings.ReplaceAll(string(readFile(t, harness.app.projectPath(reviewPath))), "Task ID: "+taskID, "Task ID: tampered")
