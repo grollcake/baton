@@ -2,7 +2,7 @@
 
 Use this file for durable project guidance that should survive across agent sessions.
 
-Do not use this file for progress tracking, current task status, temporary plans, or next steps. Use `baton.log` and `.baton/runs/` artifacts for that.
+Do not use this file for progress tracking, current task status, temporary plans, or next steps. Use `BATON-LOG.txt` and `.baton/runs/` artifacts for that.
 
 Update this file when the user gives a durable instruction, constraint, preference, convention, security rule, or "do not" rule that future agents should keep following.
 
@@ -56,7 +56,7 @@ Examples not to record:
   explicit user approval allows Director to write and append `CLOSE`; user
   `FEEDBACK` after any review is a normal pipeline step.
 - Planner and Executor notify Director when artifacts are complete and provide a
-  suggested event summary; only Director writes `baton.log`.
+  suggested event summary; only Director writes `BATON-LOG.txt`.
 - The `baton` binary is Director-owned; delegates must not use its
   state-mutating commands.
 - Keep delegation prompts brief: pass explicit constraints and source/artifact

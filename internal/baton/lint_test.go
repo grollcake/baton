@@ -21,7 +21,7 @@ func TestLintDoesNotExecutePaths(t *testing.T) {
 		t.Fatal("lint accepted a malicious path")
 	}
 	if _, err := os.Stat(marker); !os.IsNotExist(err) {
-		t.Fatal("lint executed a path from baton.log")
+		t.Fatal("lint executed a path from the timeline")
 	}
 }
 
@@ -321,6 +321,65 @@ func TestLintRejectsIgnoredBatonDirectory(t *testing.T) {
 	if err := harness.fail("lint"); err == nil {
 		t.Fatal("lint accepted a .baton directory ignored by Git")
 	}
+}
+
+// TestLintRejectsIgnoredRequiredDocument covers Decision 5: a .gitignore rule
+// that matches a single required document (not the whole .baton directory)
+// must still fail lint, naming the ignored path.
+func TestLintRejectsIgnoredRequiredDocument(t *testing.T) {
+	harness := newHarness(t)
+	if _, err := harness.app.runGit("init"); err != nil {
+		t.Skipf("git unavailable: %s", err)
+	}
+	harness.run(t, "lint")
+
+	path := filepath.Join(harness.app.ProjectDir, ".gitignore")
+	if err := os.WriteFile(path, []byte("GUIDANCE.md\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := harness.fail("lint"); err == nil {
+		t.Fatal("lint accepted an ignored GUIDANCE.md")
+	} else if !strings.Contains(harness.err.String(), "GUIDANCE.md") {
+		t.Fatalf("lint error does not name the ignored document: %s", harness.err.String())
+	}
+}
+
+// TestLintRejectsIgnoredRunsDirectory covers Decision 5: a .gitignore rule
+// that matches .baton/runs/ alone must still fail lint.
+func TestLintRejectsIgnoredRunsDirectory(t *testing.T) {
+	harness := newHarness(t)
+	if _, err := harness.app.runGit("init"); err != nil {
+		t.Skipf("git unavailable: %s", err)
+	}
+	harness.run(t, "lint")
+
+	path := filepath.Join(harness.app.ProjectDir, ".gitignore")
+	if err := os.WriteFile(path, []byte("runs/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := harness.fail("lint"); err == nil {
+		t.Fatal("lint accepted an ignored .baton/runs")
+	} else if !strings.Contains(harness.err.String(), filepath.Join(".baton", "runs")) {
+		t.Fatalf("lint error does not name the ignored directory: %s", harness.err.String())
+	}
+}
+
+// TestLintToleratesIgnoredBin covers Decision 5's mandatory carve-out: this
+// repository (and any project following its convention) ignores
+// .baton/bin/, the installed binary, on purpose, and lint must keep passing
+// when only that path is ignored.
+func TestLintToleratesIgnoredBin(t *testing.T) {
+	harness := newHarness(t)
+	if _, err := harness.app.runGit("init"); err != nil {
+		t.Skipf("git unavailable: %s", err)
+	}
+	harness.run(t, "lint")
+
+	path := filepath.Join(harness.app.ProjectDir, ".gitignore")
+	if err := os.WriteFile(path, []byte("/.baton/bin/\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	harness.run(t, "lint")
 }
 
 func TestLintToleratesLegacyRunSections(t *testing.T) {

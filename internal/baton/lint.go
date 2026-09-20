@@ -42,6 +42,23 @@ func (state *lintState) requireDir(path string) {
 	}
 }
 
+// requireTimeline reports the resolved timeline file (Decision 3), erroring
+// when neither name is present or when both are present, and noting the
+// legacy name so a project reading this output knows the next append will
+// rename it.
+func (state *lintState) requireTimeline() {
+	path, err := state.app.timelinePath()
+	if err != nil {
+		state.err("%s", err)
+		return
+	}
+	if filepath.Base(path) == legacyTimelineFile {
+		state.ok("%s exists (legacy name; the next append renames it to %s)", path, timelineFile)
+		return
+	}
+	state.ok("%s exists", path)
+}
+
 var batonBlockPattern = regexp.MustCompile(`(?s)<baton-rules>.*?</baton-rules>`)
 
 func (state *lintState) checkAgentBlocks() {
@@ -78,6 +95,44 @@ func (state *lintState) checkGitTracking() {
 	state.ok(".baton is not ignored by Git")
 }
 
+// requiredTrackedPaths lists the protocol-required paths under .baton/ that
+// checkRequiredPathsTracked checks individually. .baton/bin/ (the installed
+// binary and bin/SHA256SUMS) is deliberately excluded: this repository's own
+// .gitignore ignores it on purpose as a build artifact, unlike the handoff
+// data every path here carries (Decision 5).
+var requiredTrackedPaths = []string{
+	"PROTOCOL.md", "DIRECTOR.md", "PLANNER.md", "EXECUTOR.md",
+	"HOW-TO-UPDATE.md", "VERSION", "GUIDANCE.md", "LESSON-LEARNED.md",
+	"templates", "runs", "lesson-learned",
+}
+
+// checkRequiredPathsTracked checks each protocol-required path individually,
+// because a project's .gitignore can match a single file (e.g. "*.log") or a
+// single directory without matching the whole .baton directory, which
+// checkGitTracking's whole-directory check cannot see.
+func (state *lintState) checkRequiredPathsTracked() {
+	if _, err := state.app.runGit("rev-parse", "--git-dir"); err != nil {
+		return
+	}
+	var ignored []string
+	for _, name := range requiredTrackedPaths {
+		full := state.app.batonPath(name)
+		if _, err := state.app.runGit("check-ignore", "--quiet", full); err == nil {
+			ignored = append(ignored, full)
+		}
+	}
+	if timelinePath, err := state.app.timelinePath(); err == nil {
+		if _, err := state.app.runGit("check-ignore", "--quiet", timelinePath); err == nil {
+			ignored = append(ignored, timelinePath)
+		}
+	}
+	if len(ignored) > 0 {
+		state.err("Git ignores required Baton path(s): %s", strings.Join(ignored, ", "))
+		return
+	}
+	state.ok("no individually required Baton path is ignored by Git")
+}
+
 // checkManagedDocuments compares the installed managed documents against the
 // copies this binary shipped with, so a project cannot run a protocol its
 // binary does not implement.
@@ -98,7 +153,10 @@ func (state *lintState) checkManagedDocuments() {
 }
 
 func (state *lintState) checkLog() {
-	logPath := state.app.batonPath("baton.log")
+	logPath, err := state.app.timelinePath()
+	if err != nil {
+		return
+	}
 	file, err := os.Open(logPath)
 	if err != nil {
 		return
@@ -227,7 +285,7 @@ func (state *lintState) checkLog() {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		state.err("cannot read baton.log: %s", err)
+		state.err("cannot read %s: %s", logPath, err)
 	}
 	if legacyLines > 0 {
 		state.ok("legacy Baton log lines preserved: %d", legacyLines)
@@ -274,9 +332,10 @@ func (a *App) reviewResult(path string) (reviewOutcome, error) {
 
 func (a *App) Lint() error {
 	state := &lintState{app: a}
-	for _, name := range []string{"PROTOCOL.md", "DIRECTOR.md", "PLANNER.md", "EXECUTOR.md", "HOW-TO-UPDATE.md", "VERSION", "GUIDANCE.md", "LESSON-LEARNED.md", "baton.log"} {
+	for _, name := range []string{"PROTOCOL.md", "DIRECTOR.md", "PLANNER.md", "EXECUTOR.md", "HOW-TO-UPDATE.md", "VERSION", "GUIDANCE.md", "LESSON-LEARNED.md"} {
 		state.requireFile(a.batonPath(name))
 	}
+	state.requireTimeline()
 	state.requireFile(a.installedBinaryPath())
 	state.requireFile(a.batonPath("bin", "SHA256SUMS"))
 	for _, name := range []string{"templates", "runs", "lesson-learned", "bin"} {
@@ -307,6 +366,7 @@ func (a *App) Lint() error {
 	state.checkAgentBlocks()
 	state.checkManagedDocuments()
 	state.checkGitTracking()
+	state.checkRequiredPathsTracked()
 	state.checkLog()
 	if state.errors > 0 {
 		return fmt.Errorf("baton-lint failed: %d error(s)", state.errors)

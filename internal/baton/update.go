@@ -49,6 +49,11 @@ func (a *App) preflightUpdate(upstream string) error {
 	if err := verifyChecksum(a.upstreamBinary(upstream), checksumFile, a.upstreamBinaryRelative()); err != nil {
 		return fmt.Errorf("invalid upstream binary: %w", err)
 	}
+	if _, currentErr := os.Stat(a.batonPath(timelineFile)); currentErr == nil {
+		if _, legacyErr := os.Stat(a.batonPath(legacyTimelineFile)); legacyErr == nil {
+			return a.bothTimelinesError()
+		}
+	}
 	if runtime.GOOS == "windows" {
 		if executable, err := os.Executable(); err == nil && samePath(executable, a.installedBinaryPath()) {
 			return errors.New("Windows update must be run with the new upstream baton.exe from a temporary path")
@@ -106,13 +111,21 @@ Preserved:
 - .baton/GUIDANCE.md
 - .baton/LESSON-LEARNED.md
 - .baton/lesson-learned/
-- .baton/baton.log
+- .baton/BATON-LOG.txt (or the legacy .baton/baton.log, migrated in place)
 - .baton/runs/
 `)
 		return nil
 	}
 	if err := a.preflightUpdate(upstream); err != nil {
 		return err
+	}
+
+	migrated, err := a.migrateTimeline()
+	if err != nil {
+		return err
+	}
+	if migrated {
+		fmt.Fprintf(a.Stdout, "Migrated %s -> %s\n", a.batonPath(legacyTimelineFile), a.batonPath(timelineFile))
 	}
 
 	upstreamBaton := filepath.Join(upstream, "bootstrap", ".baton")

@@ -79,7 +79,7 @@ while any TODO remains. A completed `PLAN`, `RUN`, or `REVIEW` must contain exac
 `ready-for-user-decision` or `blockers`. Each `RUN` records changed files,
 change summary, validation, and unresolved risks. Use the matching template in
 `.baton/templates/` for every artifact. Artifact `Task ID` values must
-match `baton.log`; all artifacts for a task use the PLAN key, and each REVIEW
+match `BATON-LOG.txt`; all artifacts for a task use the PLAN key, and each REVIEW
 round must match its immediately preceding RUN round. Each `CLOSE` records how
 the delivered work differed from its `PLAN`, or `none`.
 

@@ -125,7 +125,7 @@ func TestStatusOffersPlanCommandAtRequest(t *testing.T) {
 	taskID, key := parseRoundOutput(t, harness.run(t, "new-round", "request-plan", "--summary", "Request plan flow"))
 
 	planPath := ".baton/runs/" + key + "-PLAN.md"
-	logged := readFile(t, harness.app.batonPath("baton.log"))
+	logged := readFile(t, harness.app.batonPath(timelineFile))
 	if !strings.Contains(string(logged), planPath) {
 		t.Fatalf("REQUEST line missing forward PLAN path %s: %s", planPath, logged)
 	}

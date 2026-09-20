@@ -13,7 +13,7 @@ that already has `.baton/`.
 6. If managed files can be replaced, run `<baton> update --upstream <repo> --apply`.
 7. If updating manually, use `<baton> merge-agent-block` for `AGENTS.md` and `CLAUDE.md` blocks.
 8. Run the installed `<baton> lint` after the update.
-9. Record `REQUEST -> RUN_DONE` in `baton.log` with the before/after `VERSION` in the summary if the update was manual. The update command records this automatically.
+9. Record `REQUEST -> RUN_DONE` in `BATON-LOG.txt` with the before/after `VERSION` in the summary if the update was manual. The update command records this automatically.
 
 ## Preserve
 
@@ -23,7 +23,7 @@ Do not overwrite:
 - `.baton/GUIDANCE.md`
 - `.baton/LESSON-LEARNED.md`
 - `.baton/lesson-learned/`
-- `.baton/baton.log`
+- `.baton/BATON-LOG.txt`
 - `.baton/runs/`
 
 If a Baton block contains project-specific instructions that cannot be

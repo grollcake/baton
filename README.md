@@ -18,7 +18,7 @@ Director는 Planner와 Executor에게 작업을 위임하고 사용자 응답 �
 
 작업은 파일에 기록한다.
 
-- `baton.log`: 작업 이벤트 타임라인
+- `BATON-LOG.txt`: 작업 이벤트 타임라인
 - `runs/`: 작업별 계획, 실행, 검토, 종료 기록
 - `GUIDANCE.md`: 세션이 바뀌어도 유지할 지침과 제약
 - `lesson-learned/`: 완료된 작업에서 얻은 재사용 가능한 지식
@@ -85,7 +85,7 @@ Standard 작업의 기본 흐름은 다음과 같다.
 
 ## 이벤트와 산출물
 
-`baton.log`는 다음 형식의 추가 전용 이벤트 기록이다.
+`BATON-LOG.txt`는 다음 형식의 추가 전용 이벤트 기록이다.
 
 ```text
 <timestamp> | <task-id> | <event> | <role> | <summary> | <path?>
@@ -118,7 +118,7 @@ Standard 작업의 산출물은 `.baton/runs/`에 같은 `<KEY>`로 저장한다
 │   ├── baton[.exe]
 │   └── SHA256SUMS
 ├── lesson-learned/
-├── baton.log
+├── BATON-LOG.txt
 ├── runs/
 └── templates/
 ```
@@ -162,7 +162,7 @@ chmod +x .baton/bin/baton
 
 ## 운영 원칙
 
-- Director만 `baton.log`와 작업 상태를 변경한다.
+- Director만 `BATON-LOG.txt`와 작업 상태를 변경한다.
 - Executor는 계획 범위를 임의로 넓히지 않는다.
 - Standard 작업은 사용자의 명시적 승인 전에는 종료하지 않는다.
 - 사용자에게 보고된 결함은 증거를 확보한 뒤 수정하고 스모크 테스트를 남긴다.

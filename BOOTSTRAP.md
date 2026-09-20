@@ -30,7 +30,7 @@
 - **이미 있으면**: **부트스트랩을 중단**하고 사용자에게 보고합니다.
   - 이미 Baton이 적용된 프로젝트일 가능성이 큽니다.
   - 사용자가 "최신화", "업데이트", "sync"를 요청한 경우에는 새 설치가 아니라 아래 "업데이트 절차"를 따릅니다.
-  - 사용자 확인 없이 기존 `AGENTS.md`, `baton.log`, `runs/`, `GUIDANCE.md`, `lesson-learned/`를 덮어쓰거나 머지하지 않습니다.
+  - 사용자 확인 없이 기존 `AGENTS.md`, `BATON-LOG.txt`, `runs/`, `GUIDANCE.md`, `lesson-learned/`를 덮어쓰거나 머지하지 않습니다.
   - 사용자가 명시적으로 "재초기화" 또는 "특정 파일만 갱신"을 요청한 경우에만, 해당 범위로 한정해 진행합니다.
 - **없으면**: 이후 단계로 진행합니다.
 
@@ -80,9 +80,9 @@
 6. 대상 프로젝트에는 선택한 바이너리 하나만 둡니다. Go 런타임이나 소스는
    복사하지 않습니다.
 
-### 5. 초기 `baton.log` 기록
+### 5. 초기 `BATON-LOG.txt` 기록
 
-복사된 `<project>/.baton/baton.log`에는 부트스트랩 작업을 기록하기 위한 두 줄이 들어 있습니다. 이 두 줄의 placeholder를 실제 값으로 바꿉니다.
+복사된 `<project>/.baton/BATON-LOG.txt`에는 부트스트랩 작업을 기록하기 위한 두 줄이 들어 있습니다. 이 두 줄의 placeholder를 실제 값으로 바꿉니다.
 
 1. 현재 로컬 시스템 시간을 `YYYY-MM-DDTHH:MM:SS` 형식으로 적습니다.
 2. 무작위 소문자 영문 4글자로 `task-id` 하나를 만듭니다.
@@ -157,7 +157,7 @@ Baton v<x.x> 부트스트랩을 완료했습니다. 이제 이 프로젝트는 B
 | `CLAUDE.md` | 존재하는 경우 최신 `bootstrap/CLAUDE.md`의 `<baton-rules>...</baton-rules>` 블록과 비교해 현재 파일의 Baton 블록만 교체 또는 보강 |
 | `.baton/GUIDANCE.md` | 덮어쓰지 않음 |
 | `.baton/LESSON-LEARNED.md` | 프로젝트별 기록 인덱스이므로 덮어쓰지 않음 |
-| `.baton/baton.log` | 기존 줄을 수정하지 않음. 이전 버전의 다른 형식도 보존하고, 새 이벤트부터 최신 `REQUEST`, `PLANNED`, `EXECUTED`, `REVIEW`, `FEEDBACK`, `CLOSE`, `RUN_DONE` 형식을 사용 |
+| `.baton/BATON-LOG.txt` | 기존 줄을 수정하지 않음. 이전 버전의 다른 형식도 보존하고, 새 이벤트부터 최신 `REQUEST`, `PLANNED`, `EXECUTED`, `REVIEW`, `FEEDBACK`, `CLOSE`, `RUN_DONE` 형식을 사용 |
 | `.baton/runs/` | 덮어쓰지 않음 |
 | `.baton/lesson-learned/` | 덮어쓰지 않음 |
 
@@ -182,9 +182,9 @@ Baton v<x.x> 부트스트랩을 완료했습니다. 이제 이 프로젝트는 B
 - Baton 포인터만 있고 블록이 없으면 최신 블록을 추가하되 중복 문장은 제거합니다.
 - Baton 블록 안에 프로젝트 고유 지시가 섞여 있어 자동 분리가 어렵다면 파일을 바꾸지 않고 충돌로 보고합니다.
 
-### 6. `baton.log` 기록
+### 6. `BATON-LOG.txt` 기록
 
-업데이트 완료 후 Director는 `baton.log`에 `REQUEST → RUN_DONE`을 추가합니다. 메타 작업이라 기록을 생략하지 않습니다. `summary`에 이전·이후 `VERSION`을 포함합니다.
+업데이트 완료 후 Director는 `BATON-LOG.txt`에 `REQUEST → RUN_DONE`을 추가합니다. 메타 작업이라 기록을 생략하지 않습니다. `summary`에 이전·이후 `VERSION`을 포함합니다.
 
 예시:
 
@@ -214,7 +214,7 @@ Baton 부트스트랩을 중단했습니다.
 
 이유:
 - <project>/.baton/ 가 이미 존재
-- 기존 baton.log 마지막 이벤트: <timestamp> | <event_type> | ...
+- 기존 BATON-LOG.txt 마지막 이벤트: <timestamp> | <event_type> | ...
 
 확인이 필요한 사항:
 - 재초기화를 원하시면 .baton/를 백업 후 알려주세요.

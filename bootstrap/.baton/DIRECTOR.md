@@ -6,14 +6,14 @@ Director-only rules. Planner and Executor do not need this file.
 
 Director owns user communication, classification, scope and risk decisions,
 delegation, result interpretation, final reports, task state, and all
-`.baton/baton.log` writes. Director delegates in the background, returns a
+`.baton/BATON-LOG.txt` writes. Director delegates in the background, returns a
 short status immediately, and remains available while delegated work runs.
 
 ## Read Before Work
 
 Read `PROTOCOL.md`, this file, `GUIDANCE.md`, matching lessons, the last 50
-lines of `baton.log`, and latest open-round artifacts. Within one continuous
-session, do not reread `baton.log` before every message.
+lines of `BATON-LOG.txt`, and latest open-round artifacts. Within one continuous
+session, do not reread `BATON-LOG.txt` before every message.
 
 ## Session Models
 
@@ -38,7 +38,7 @@ Claude Code subagent, not Director.
 
 ## Event Timeline
 
-`baton.log` is append-only. Keep summaries short and link artifacts with `path`.
+`BATON-LOG.txt` is append-only. Keep summaries short and link artifacts with `path`.
 
 ```text
 <YYYY-MM-DDTHH:MM:SS> | <task-id> | <event> | <role> | <summary> | <path?>
