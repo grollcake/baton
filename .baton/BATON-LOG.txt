@@ -97,3 +97,5 @@
 2026-09-20T20:16:35 | qxce | RUN_DONE | Director | Six lessons recorded and indexed
 2026-09-22T20:34:46 | tvnt | REQUEST  | Director | Record a lesson only when it cost real effort and will recur
 2026-09-22T20:35:19 | tvnt | RUN_DONE | Director | A lesson now needs real cost and a chance to recur
+2026-09-22T20:38:29 | wbap | REQUEST  | Director | Drop the three lessons that cost nothing to learn
+2026-09-22T20:38:43 | wbap | RUN_DONE | Director | Three lessons kept, each a mistake that will recur
