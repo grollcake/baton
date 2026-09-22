@@ -95,3 +95,5 @@
 2026-09-20T20:13:13 | umtl | RUN_DONE | Director | Every close names its lesson candidates
 2026-09-20T20:16:23 | qxce | REQUEST  | Director | Put the day's lessons in the index
 2026-09-20T20:16:35 | qxce | RUN_DONE | Director | Six lessons recorded and indexed
+2026-09-22T20:34:46 | tvnt | REQUEST  | Director | Record a lesson only when it cost real effort and will recur
+2026-09-22T20:35:19 | tvnt | RUN_DONE | Director | A lesson now needs real cost and a chance to recur

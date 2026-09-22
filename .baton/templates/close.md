@@ -20,8 +20,9 @@ Reviewed Evidence: <path-to-review>
 
 ## Lesson Candidates
 
-- <reusable knowledge this round produced, or none. A lesson is something a
-  future round would do differently, not a summary of this one.>
+- <none, unless this round made an actual mistake or took long to find a root
+  cause or fix, and it is likely to recur. Anything a short look would reveal
+  is not a lesson.>
 
 ## Remaining Nits
 

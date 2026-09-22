@@ -21,7 +21,7 @@ Director는 Planner와 Executor에게 작업을 위임하고 사용자 응답 �
 - `BATON-LOG.txt`: 작업 이벤트 타임라인
 - `runs/`: 작업별 계획, 실행, 검토, 종료 기록
 - `GUIDANCE.md`: 세션이 바뀌어도 유지할 지침과 제약
-- `lesson-learned/`: 완료된 작업에서 얻은 재사용 가능한 지식
+- `lesson-learned/`: 실제 실수나 오래 걸려 찾은 원인·해법 중 다시 일어날 만한 것
 
 ## 설치와 업데이트
 

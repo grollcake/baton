@@ -130,9 +130,10 @@ three to five user manual checks, and the `REVIEW` path.
 
 - `GUIDANCE.md`: durable instructions, constraints, preferences, conventions,
   security rules, and prohibitions only.
-- `lesson-learned/`: reusable mistakes, solutions, and validation knowledge from
-  completed work only. Every `CLOSE` names its lesson candidates, so a round
-  cannot end without saying whether it produced any. Use `templates/lesson-learned.md`; each record includes
+- `lesson-learned/`: only an actual mistake, or a root cause or fix that took
+  long to find, that is likely to recur. Anything a short look would reveal is
+  not a lesson, and most rounds have none. Every `CLOSE` names its lesson
+  candidates, or `none`. Use `templates/lesson-learned.md`; each record includes
   `Applies When` and `Trigger / Symptom`, and accepted records are indexed in
   `LESSON-LEARNED.md`.
 - Task progress stays in Director-owned state and round artifacts.
