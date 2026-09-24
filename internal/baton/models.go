@@ -22,15 +22,19 @@ type roleModels struct {
 
 type modelPreferences map[string]roleModels
 
+type effortChoice struct {
+	Effort      string `json:"effort"`
+	Description string `json:"description,omitempty"`
+}
+
 type codexCatalog struct {
 	Models []struct {
-		Slug                     string `json:"slug"`
-		DisplayName              string `json:"display_name"`
-		Visibility               string `json:"visibility"`
-		DefaultReasoningLevel    string `json:"default_reasoning_level"`
-		SupportedReasoningLevels []struct {
-			Effort string `json:"effort"`
-		} `json:"supported_reasoning_levels"`
+		Slug                     string         `json:"slug"`
+		DisplayName              string         `json:"display_name"`
+		Description              string         `json:"description"`
+		Visibility               string         `json:"visibility"`
+		DefaultReasoningLevel    string         `json:"default_reasoning_level"`
+		SupportedReasoningLevels []effortChoice `json:"supported_reasoning_levels"`
 	} `json:"models"`
 }
 
@@ -93,6 +97,17 @@ func printJSON(writer interface{ Write([]byte) (int, error) }, value any) error 
 	return err
 }
 
+// fallbackEfforts lists the efforts every recommended model supports, used
+// when the catalog cannot be read and no descriptions are available.
+func fallbackEfforts() []effortChoice {
+	efforts := []string{"low", "medium", "high", "xhigh", "max"}
+	choices := make([]effortChoice, 0, len(efforts))
+	for _, effort := range efforts {
+		choices = append(choices, effortChoice{Effort: effort})
+	}
+	return choices
+}
+
 func (a *App) listModels(platform string) error {
 	if platform == "claude-code" {
 		return printJSON(a.Stdout, []map[string]any{
@@ -106,9 +121,9 @@ func (a *App) listModels(platform string) error {
 	if err != nil {
 		fmt.Fprintf(a.Stderr, "warning: codex model discovery failed; showing recommended fallback models: %v\n", err)
 		return printJSON(a.Stdout, []map[string]any{
-			{"model": "gpt-5.6-sol", "efforts": []string{"low", "medium", "high", "xhigh", "max"}},
-			{"model": "gpt-5.6-terra", "efforts": []string{"low", "medium", "high", "xhigh", "max"}},
-			{"model": "gpt-5.6-luna", "efforts": []string{"low", "medium", "high", "xhigh", "max"}},
+			{"model": "gpt-5.6-sol", "efforts": fallbackEfforts()},
+			{"model": "gpt-5.6-terra", "efforts": fallbackEfforts()},
+			{"model": "gpt-5.6-luna", "efforts": fallbackEfforts()},
 		})
 	}
 	var catalog codexCatalog
@@ -120,15 +135,12 @@ func (a *App) listModels(platform string) error {
 		if model.Visibility != "list" {
 			continue
 		}
-		efforts := make([]string, 0, len(model.SupportedReasoningLevels))
-		for _, level := range model.SupportedReasoningLevels {
-			efforts = append(efforts, level.Effort)
-		}
 		models = append(models, map[string]any{
 			"model":          model.Slug,
 			"display_name":   model.DisplayName,
+			"description":    model.Description,
 			"default_effort": model.DefaultReasoningLevel,
-			"efforts":        efforts,
+			"efforts":        model.SupportedReasoningLevels,
 		})
 	}
 	return printJSON(a.Stdout, models)
