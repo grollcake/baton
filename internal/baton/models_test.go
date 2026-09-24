@@ -65,13 +65,18 @@ func TestModelsCodexCatalogAndFallback(t *testing.T) {
 	harness := newHarness(t)
 	harness.app.Command = func(name string, args ...string) ([]byte, error) {
 		return []byte(`{"models":[
-  {"slug":"shown","display_name":"Shown","visibility":"list","default_reasoning_level":"medium","supported_reasoning_levels":[{"effort":"low"},{"effort":"medium"}]},
+  {"slug":"shown","display_name":"Shown","description":"Shown model","visibility":"list","default_reasoning_level":"medium","supported_reasoning_levels":[{"effort":"low","description":"lighter reasoning"},{"effort":"medium"}]},
   {"slug":"hidden","display_name":"Hidden","visibility":"hide","default_reasoning_level":"medium","supported_reasoning_levels":[]}
 ]}`), nil
 	}
 	catalog := harness.run(t, "models", "list", "codex")
 	if !strings.Contains(catalog, `"model": "shown"`) || strings.Contains(catalog, `"model": "hidden"`) {
 		t.Fatalf("unexpected filtered catalog: %s", catalog)
+	}
+	for _, want := range []string{`"description": "Shown model"`, `"description": "lighter reasoning"`} {
+		if !strings.Contains(catalog, want) {
+			t.Fatalf("catalog dropped %s: %s", want, catalog)
+		}
 	}
 
 	harness.app.Command = func(name string, args ...string) ([]byte, error) {
