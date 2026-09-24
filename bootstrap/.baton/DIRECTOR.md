@@ -110,6 +110,16 @@ Run `<baton> gate ...` before delegating the next stage. If the prior
 event is missing, stop delegation and append or repair the Director-owned state.
 Read logs manually only when the tool is missing or fails.
 
+One Planner agent and one Executor agent serve a task from start to finish.
+Spawn each at most once and send every later stage of that task, including
+review, a feedback round, and the next `RUN-<NN>`, to the agent that already
+holds it, still in the background. Name each agent after its task, so
+concurrent tasks keep separate pairs. Check the host's agent list before
+delegating and reuse the task's agent when it is there. Spawn a replacement
+only when the existing agent stopped or failed, stopping the old one first, and
+stop both agents after `CLOSE` or when the user stops the task. In Claude Code
+these are `ListAgents`, `SendMessage`, and `TaskStop`.
+
 Do not rely on a delegate's completion notice. Right after each delegation, run
 `<baton> await ...` for the expected artifact as a background command when the
 host supports it (in Claude Code, `run_in_background: true`). It exits 0 once

@@ -99,3 +99,5 @@
 2026-09-22T20:35:19 | tvnt | RUN_DONE | Director | A lesson now needs real cost and a chance to recur
 2026-09-22T20:38:29 | wbap | REQUEST  | Director | Drop the three lessons that cost nothing to learn
 2026-09-22T20:38:43 | wbap | RUN_DONE | Director | Three lessons kept, each a mistake that will recur
+2026-09-24T11:48:47 | fneu | REQUEST  | Director | Reuse one Planner and one Executor agent per task
+2026-09-24T11:48:47 | fneu | RUN_DONE | Director | A task keeps its two agents until it closes
