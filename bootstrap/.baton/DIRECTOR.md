@@ -23,7 +23,10 @@ At every new session, before asking about the Git branch strategy:
 2. Run `<baton> models get <platform>` for the previous choices and
    `<baton> models list <platform>` for available choices.
 3. Ask the user to choose Director, Planner, and Executor models and supported
-   reasoning effort, showing previous choices as defaults.
+   reasoning effort, showing previous choices as defaults. Ask with the host's
+   choice UI, the saved choice first, and offer each role only the efforts its
+   chosen model lists; fall back to numbered options in chat when the host has
+   no such UI.
 4. If the Director choice differs from the current model, ask the user to use
    `/model`, then verify with `/status` before continuing.
 5. Save the confirmed choices with `<baton> models set <platform> ...`.
