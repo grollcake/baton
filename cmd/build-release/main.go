@@ -83,10 +83,7 @@ func refreshInstall(root, binRoot, sums string) {
 	if info, err := os.Stat(installed); err != nil || !info.IsDir() {
 		return
 	}
-	name := "baton"
-	if runtime.GOOS == "windows" {
-		name += ".exe"
-	}
+	name := binaryName()
 	source := filepath.Join(binRoot, runtime.GOOS+"-"+runtime.GOARCH, name)
 	for _, pair := range [][2]string{
 		{source, filepath.Join(installed, name)},
@@ -100,11 +97,35 @@ func refreshInstall(root, binRoot, sums string) {
 		if pair[0] == source {
 			mode = 0o755
 		}
-		if err := os.WriteFile(pair[1], content, mode); err != nil {
+		if err := replaceFile(pair[1], content, mode); err != nil {
 			fatal(fmt.Errorf("refresh %s: %w", pair[1], err))
 		}
 	}
 	fmt.Printf("refreshed .baton/bin/%s\n", name)
+}
+
+// binaryName is the executable's file name on the host platform.
+func binaryName() string {
+	if runtime.GOOS == "windows" {
+		return "baton.exe"
+	}
+	return "baton"
+}
+
+// replaceFile writes content to a new file and renames it over path, the way
+// internal/baton's copyFile does. Writing over the running binary in place
+// keeps its inode, and macOS then kills every later exec of that path because
+// the ad-hoc signature it cached no longer matches the bytes.
+func replaceFile(path string, content []byte, mode os.FileMode) error {
+	temp := path + ".tmp"
+	if err := os.WriteFile(temp, content, mode); err != nil {
+		return err
+	}
+	if err := os.Rename(temp, path); err != nil {
+		os.Remove(temp)
+		return err
+	}
+	return nil
 }
 
 func fatal(err error) {
