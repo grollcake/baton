@@ -59,8 +59,9 @@ however many rounds that takes, which is what Baton is named for.
   Director coordinates Planner -> Executor -> Planner review, preferably in the
   background, while staying available to the user.
 
-At every session start, Director first detects Codex or Claude Code and asks the
-user to choose the Director, Planner, and Executor models. Show the saved choices
+Before the session's first Relay task, Director detects Codex or Claude Code and
+asks the user to choose the Director, Planner, and Executor models. Solo work and
+excluded requests do not wait for this. Show the saved choices
 from `baton models get <platform>` as defaults and the currently available
 choices from `baton models list <platform>`. Save the result with `baton
 models set`; preferences are user-local and separate for each platform. Then ask

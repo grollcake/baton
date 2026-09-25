@@ -201,6 +201,7 @@ func TestTransitionMatrixAndAllowedFlows(t *testing.T) {
 	appendRound("01", "blockers")
 	appendRound("02", "ready-for-user-decision")
 	harness.run(t, "feedback", "--task-id", taskID, "--summary", "User feedback")
+	harness.run(t, "feedback", "--task-id", taskID, "--summary", "One more request in the same round")
 	appendRound("03", "ready-for-user-decision")
 
 	status := harness.run(t, "status", "--task-id", taskID)

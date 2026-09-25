@@ -105,3 +105,5 @@
 2026-09-24T12:09:08 | fkff | RUN_DONE | Director | models list answers what the web search was for
 2026-09-24T12:24:21 | mbee | REQUEST  | Director | Pick session models from choices, not typed names
 2026-09-24T12:24:21 | mbee | RUN_DONE | Director | Model selection uses the host's choice UI
+2026-09-25T11:10:11 | qoib | REQUEST  | Director | Fix what a project using Baton got blocked by
+2026-09-25T11:10:11 | qoib | RUN_DONE | Director | Four blockers from the field are gone

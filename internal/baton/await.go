@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	awaitDefaultTimeout = 30 * time.Minute
+	awaitDefaultTimeout = 60 * time.Minute
 	awaitInterval       = 2 * time.Second
 )
 
