@@ -502,6 +502,7 @@ func (a *App) runStatus(args []string) error {
 	if taskID == "" {
 		fmt.Fprintln(a.Stdout, "no open task")
 		fmt.Fprintf(a.Stdout, "branch: %s\n", branch)
+		a.printHandoffLine(records)
 		return nil
 	}
 	fmt.Fprintf(a.Stdout, "task_id: %s\nevents:\n", taskID)
@@ -512,30 +513,7 @@ func (a *App) runStatus(args []string) error {
 	}
 	last := lastEvent(records, taskID)
 	fmt.Fprintf(a.Stdout, "last_event: %s\n", valueOr(last, "none"))
-	next := map[string]string{
-		eventRequest: "PLANNED (delegate Planner)", eventPlanned: "EXECUTED (delegate Executor)",
-		eventExecuted: "REVIEW (delegate Planner review)", eventReview: "user approval -> CLOSE",
-		eventFeedback: "EXECUTED (resume Executor work)", eventClose: "closed",
-		eventRunDone: "closed (direct work)",
-	}[last]
-	var unreadableReviewPath string
-	if last == eventReview {
-		// Fail-closed default: without a readable REVIEW that reports
-		// ready-for-user-decision, the next gate is another EXECUTED round,
-		// never user approval. runStatus and nextCommand each read the
-		// REVIEW artifact independently and must stay in agreement about
-		// what counts as ready.
-		next = "EXECUTED (delegate Executor)"
-		if review, found := lastRecord(records, taskID, eventReview); found {
-			outcome, err := a.reviewResult(review.Path)
-			if err == nil && outcome == reviewReady {
-				next = "user approval -> CLOSE"
-			}
-			if err != nil {
-				unreadableReviewPath = review.Path
-			}
-		}
-	}
+	next, unreadableReviewPath := a.nextGateDescription(records, taskID, last)
 	fmt.Fprintf(a.Stdout, "next_gate: %s\nbranch: %s\n", valueOr(next, "unknown"), branch)
 	if unreadableReviewPath != "" {
 		fmt.Fprintf(a.Stdout, "review_artifact_unreadable: %s\n", unreadableReviewPath)
@@ -546,6 +524,7 @@ func (a *App) runStatus(args []string) error {
 	for _, pending := range a.pendingArtifacts(records, taskID, last) {
 		fmt.Fprintf(a.Stdout, "pending_artifact: %s\n", pending)
 	}
+	a.printHandoffLine(records)
 	return nil
 }
 
@@ -580,6 +559,7 @@ func (a *App) reportOpenTasks(records []Record) error {
 		fmt.Fprintf(a.Stdout, "open_task: %s | last_event: %s | %s\n", task.id, task.lastEvent, task.summary)
 	}
 	fmt.Fprintf(a.Stdout, "open_tasks: %d\n", len(open))
+	a.printHandoffLine(records)
 	return nil
 }
 
@@ -596,6 +576,76 @@ func (a *App) reviewReadyForUser(records []Record, taskID string) bool {
 	}
 	outcome, err := a.reviewResult(review.Path)
 	return err == nil && outcome == reviewReady
+}
+
+// nextGateDescription reports the next gate's description for a task, plus
+// the REVIEW artifact path when the latest REVIEW cannot be read (the
+// fail-closed default: without a readable REVIEW that reports
+// ready-for-user-decision, the next gate is another EXECUTED round, never
+// user approval). runStatus and the handoff Delegates block both call this,
+// so they stay in agreement about what counts as ready instead of each
+// re-reading the REVIEW artifact their own way.
+func (a *App) nextGateDescription(records []Record, taskID, last string) (string, string) {
+	next := map[string]string{
+		eventRequest: "PLANNED (delegate Planner)", eventPlanned: "EXECUTED (delegate Executor)",
+		eventExecuted: "REVIEW (delegate Planner review)", eventReview: "user approval -> CLOSE",
+		eventFeedback: "EXECUTED (resume Executor work)", eventClose: "closed",
+		eventRunDone: "closed (direct work)",
+	}[last]
+	var unreadableReviewPath string
+	if last == eventReview {
+		next = "EXECUTED (delegate Executor)"
+		if review, found := lastRecord(records, taskID, eventReview); found {
+			outcome, err := a.reviewResult(review.Path)
+			if err == nil && outcome == reviewReady {
+				next = "user approval -> CLOSE"
+			}
+			if err != nil {
+				unreadableReviewPath = review.Path
+			}
+		}
+	}
+	return next, unreadableReviewPath
+}
+
+// expectedArtifact reports the event and path of the artifact a task's
+// current stage is expected to produce next, mirroring the target
+// nextCommand delegates to. ok is false when no delegate artifact is
+// pending: the task has no REQUEST path yet, or the latest REVIEW is already
+// ready for the user's decision, where the next step is CLOSE, not a
+// delegation.
+func (a *App) expectedArtifact(records []Record, taskID, last string) (event, path string, ok bool) {
+	if last == eventRequest {
+		request, found := lastRecord(records, taskID, eventRequest)
+		if !found || request.Path == "" {
+			return "", "", false
+		}
+		return eventPlanned, request.Path, true
+	}
+	planned, found := lastRecord(records, taskID, eventPlanned)
+	if !found {
+		return "", "", false
+	}
+	key := artifactKey(planned.Path, eventPlanned)
+	executed, hasRun := lastRecord(records, taskID, eventExecuted)
+	switch last {
+	case eventPlanned, eventFeedback, eventReview:
+		if last == eventReview && a.reviewReadyForUser(records, taskID) {
+			return "", "", false
+		}
+		round := 1
+		if hasRun {
+			number, err := strconv.Atoi(artifactRound(executed.Path, eventExecuted))
+			if err != nil {
+				return "", "", false
+			}
+			round = number + 1
+		}
+		return eventExecuted, fmt.Sprintf("%s-RUN-%02d.md", key, round), true
+	case eventExecuted:
+		return eventReview, fmt.Sprintf("%s-REVIEW-%s.md", key, artifactRound(executed.Path, eventExecuted)), true
+	}
+	return "", "", false
 }
 
 // nextCommand builds the delegation prompt command for the next step, so
@@ -618,23 +668,15 @@ func (a *App) nextCommand(records []Record, taskID, last string) string {
 		return ""
 	}
 	key := filepath.Base(artifactKey(planned.Path, eventPlanned))
-	executed, hasRun := lastRecord(records, taskID, eventExecuted)
-	switch last {
-	case eventPlanned, eventFeedback, eventReview:
-		if last == eventReview && a.reviewReadyForUser(records, taskID) {
-			return ""
-		}
-		round := 1
-		if hasRun {
-			number, err := strconv.Atoi(artifactRound(executed.Path, eventExecuted))
-			if err != nil {
-				return ""
-			}
-			round = number + 1
-		}
-		return fmt.Sprintf("baton prompt exec --task-id %s --key %s --run-number %02d", taskID, key, round)
+	event, path, ok := a.expectedArtifact(records, taskID, last)
+	if !ok {
+		return ""
+	}
+	switch event {
 	case eventExecuted:
-		return fmt.Sprintf("baton prompt review --task-id %s --key %s --run-number %s", taskID, key, artifactRound(executed.Path, eventExecuted))
+		return fmt.Sprintf("baton prompt exec --task-id %s --key %s --run-number %s", taskID, key, artifactRound(path, eventExecuted))
+	case eventReview:
+		return fmt.Sprintf("baton prompt review --task-id %s --key %s --run-number %s", taskID, key, artifactRound(path, eventReview))
 	}
 	return ""
 }

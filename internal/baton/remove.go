@@ -18,7 +18,7 @@ import (
 // comparison would treat any customisation as "not Baton's" and leave it
 // behind, which is not what "remove" promises for its own installed files.
 var shippedTemplateNames = []string{
-	"close.md", "concurrency.md", "guidance.md", "lesson-learned.md",
+	"close.md", "concurrency.md", "guidance.md", "handoff.md", "lesson-learned.md",
 	"plan.md", "review.md", "run.md",
 }
 
@@ -197,7 +197,7 @@ func (a *App) buildRemovePlan() (removePlan, error) {
 		}
 	}
 
-	for _, name := range []string{timelineFile, "GUIDANCE.md", "LESSON-LEARNED.md", "lesson-learned", "runs", "CONCURRENCY.md"} {
+	for _, name := range []string{timelineFile, "GUIDANCE.md", "LESSON-LEARNED.md", "lesson-learned", "runs", "CONCURRENCY.md", handoffFile} {
 		path := a.batonPath(name)
 		if _, statErr := os.Stat(path); statErr == nil {
 			plan.keptPaths = append(plan.keptPaths, path)

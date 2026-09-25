@@ -290,6 +290,30 @@ func TestRemoveKeepsUnrecognizedBatonContent(t *testing.T) {
 	}
 }
 
+// TestRemoveReportsSealedHandoffAsKept pins the REVIEW-01 nit: HANDOFF.md is
+// a record like CONCURRENCY.md, not a managed document, so it belongs in the
+// dry run's "Keep:" list (plan.keptPaths) alongside its closest sibling,
+// rather than being silently absent from it. Nothing was ever lost -- the
+// root scan only ever deletes managed documents and VERSION -- but it must
+// be named.
+func TestRemoveReportsSealedHandoffAsKept(t *testing.T) {
+	harness := newHarness(t)
+	handoffPath := harness.app.batonPath("HANDOFF.md")
+	if err := os.WriteFile(handoffPath, []byte("# HANDOFF\nsealed\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	output := harness.run(t, "remove")
+
+	if _, err := os.Stat(handoffPath); err != nil {
+		t.Fatalf("dry run must not touch HANDOFF.md: %v", err)
+	}
+	keepSection := output[strings.Index(output, "Keep:"):]
+	if !strings.Contains(keepSection, "HANDOFF.md") {
+		t.Fatalf("remove's Keep: list did not name HANDOFF.md: %s", output)
+	}
+}
+
 // TestRemoveOpenTaskRefusesThenForce mirrors pause's Decision 5 behaviour for
 // remove: an open task blocks by default, is named in the refusal, and
 // --force proceeds and names it in the recorded summary.

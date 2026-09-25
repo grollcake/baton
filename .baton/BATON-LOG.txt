@@ -107,3 +107,11 @@
 2026-09-24T12:24:21 | mbee | RUN_DONE | Director | Model selection uses the host's choice UI
 2026-09-25T11:10:11 | qoib | REQUEST  | Director | Fix what a project using Baton got blocked by
 2026-09-25T11:10:11 | qoib | RUN_DONE | Director | Four blockers from the field are gone
+2026-09-25T11:30:59 | eidq | REQUEST  | Director | Add a handoff record so a stopped session can be continued | .baton/runs/20260925-1130-handoff-PLAN.md
+2026-09-25T11:35:35 | eidq | PLANNED  | Planner  | Plan for baton handoff: a sealed .baton/HANDOFF.md, stamped and surfaced by the binary | .baton/runs/20260925-1130-handoff-PLAN.md
+2026-09-25T11:47:49 | eidq | EXECUTED | Executor | baton handoff seals, stamps, and surfaces .baton/HANDOFF.md | .baton/runs/20260925-1130-handoff-RUN-01.md
+2026-09-25T11:52:21 | eidq | REVIEW   | Planner  | Review of handoff round 01 | .baton/runs/20260925-1130-handoff-REVIEW-01.md
+2026-09-25T11:56:28 | eidq | FEEDBACK | Director | Handoff must stamp delegate state itself, not ask Director to type it
+2026-09-25T12:09:29 | eidq | EXECUTED | Executor | handoff stamps delegate state; review nits closed | .baton/runs/20260925-1130-handoff-RUN-02.md
+2026-09-25T12:15:08 | eidq | REVIEW   | Planner  | Review of handoff round 02 | .baton/runs/20260925-1130-handoff-REVIEW-02.md
+2026-09-25T12:40:53 | eidq | CLOSE    | Director | A stopping session seals a handoff the next one finds by itself | .baton/runs/20260925-1130-handoff-CLOSE.md

@@ -88,7 +88,9 @@ func Discover() (*App, error) {
 // writing nothing, while the project is paused (Decision 3). "update" and
 // "merge-agent-block" are deliberately absent: each checks for itself, after
 // parsing its own flags, so update's dry run stays allowed and both can use
-// the more specific update-trap message (Decision 4a).
+// the more specific update-trap message (Decision 4a). "handoff" is
+// deliberately absent too: it records why a session stopped and delegates
+// nothing, so a paused project must still be able to seal and clear one.
 var refusesWhilePaused = map[string]bool{
 	"append":    true,
 	"new-round": true,
@@ -126,6 +128,8 @@ func (a *App) Run(args []string) error {
 		return a.runFeedback(args)
 	case "status":
 		return a.runStatus(args)
+	case "handoff":
+		return a.runHandoff(args)
 	case "prompt":
 		return a.runPrompt(args)
 	case "models":
@@ -173,6 +177,7 @@ Record and inspect state:
   feedback --task-id <id> --summary <text>
   gate <before-execute|before-review|before-approval> --task-id <id>
   status [--task-id <id>] [--open]
+  handoff [--clear]
 
 Configure and maintain:
   models <list|get|set> <codex|claude-code> [model options]

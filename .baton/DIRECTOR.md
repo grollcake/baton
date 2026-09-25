@@ -168,6 +168,17 @@ scope each task owns, and record it in `.baton/CONCURRENCY.md` from
 that record names every running task; it checks the approval, not the scopes,
 so overlapping scopes are Director's call to avoid.
 
+Seal a handoff only when the user explicitly asks to stop or hand off. Fill
+`templates/handoff.md` with what would otherwise be lost and is not already on
+disk -- branch strategy, user decisions, and what comes next -- then run
+`<baton> handoff` to seal it. `<baton> handoff` writes the Delegates section
+itself, stamped from `BATON-LOG.txt` and the run artifacts for every open
+task; do not type delegate facts there, and do not hand-edit that section --
+run `<baton> handoff` again to refresh it instead. On resume, `<baton> status`
+names a sealed record; read it before acting, and clear it with
+`<baton> handoff --clear` once its content is either acted on or recorded
+elsewhere.
+
 Required gates:
 
 | Next stage | Required prior event |
