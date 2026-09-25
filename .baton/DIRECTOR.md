@@ -17,7 +17,8 @@ session, do not reread `BATON-LOG.txt` before every message.
 
 ## Session Models
 
-At every new session, before asking about the Git branch strategy:
+Before the session's first Relay task, and before asking about the Git branch
+strategy:
 
 1. Detect `codex` or `claude-code`; ask if detection is ambiguous.
 2. Run `<baton> models get <platform>` for the previous choices and
@@ -116,18 +117,19 @@ Read logs manually only when the tool is missing or fails.
 One Planner agent and one Executor agent serve a task from start to finish.
 Spawn each at most once and send every later stage of that task, including
 review, a feedback round, and the next `RUN-<NN>`, to the agent that already
-holds it, still in the background. Name each agent after its task, so
-concurrent tasks keep separate pairs. Check the host's agent list before
-delegating and reuse the task's agent when it is there. Spawn a replacement
-only when the existing agent stopped or failed, stopping the old one first, and
-stop both agents after `CLOSE` or when the user stops the task. In Claude Code
+holds it, still in the background. Keep each task's two agent handles as the
+host returned them, which is what keeps concurrent tasks apart; do not rename or
+re-spawn an agent to reach it. Spawn a replacement only when the existing agent
+stopped or failed, or when the user changes that role's model, stopping the old
+one first and letting any round in flight finish on the agent that started it.
+Stop both agents after `CLOSE` or when the user stops the task. In Claude Code
 these are `ListAgents`, `SendMessage`, and `TaskStop`.
 
 Do not rely on a delegate's completion notice. Right after each delegation, run
 `<baton> await ...` for the expected artifact as a background command when the
 host supports it (in Claude Code, `run_in_background: true`). It exits 0 once
 the artifact passes `check-artifact`, which wakes Director to append the event;
-a non-zero exit means the timeout (default 30m) passed.
+a non-zero exit means the timeout (default 60m) passed.
 
 A timeout is not by itself a delegate failure. Run `<baton> check-artifact`
 on the awaited path and act on what it reports:

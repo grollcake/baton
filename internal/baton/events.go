@@ -135,7 +135,7 @@ func validTransition(prior, next string) bool {
 		"PLANNED:EXECUTED",
 		"EXECUTED:REVIEW",
 		"REVIEW:EXECUTED", "REVIEW:FEEDBACK", "REVIEW:CLOSE",
-		"FEEDBACK:EXECUTED":
+		"FEEDBACK:EXECUTED", "FEEDBACK:FEEDBACK":
 		return true
 	default:
 		return false
